@@ -1,5 +1,46 @@
 # Where things stand
 
+## Section 3.2 candidate: DOB-context hardening
+
+Validated on `task/handoff-loop`, based on `94b96fc`, at 15:58 London on
+21 November 2026. This candidate is first in the runtime integration order, before
+the overlapping unreadable-value work. It is proposed through a PR; this task does
+not merge or push to `main`. The older snapshot below remains historical evidence.
+The final release task must refresh the README and combined release figures after integration.
+
+`d9b5f72` was absent from fetched branches and PR refs, so the change was
+reconstructed. No existing test was deleted. The wider DOB readings can still
+support a match or block clearance; only explicitly attributed dates and ages can
+establish a prose DOB contradiction. Uncertain context also cannot expose a
+country clearance by hiding an agreeing source. This remains a conservative pattern
+reader, not general language understanding.
+
+| Check | Verified result |
+|---|---|
+| System unit suite | Ran 246 tests, `OK` |
+| Development run | 819 hits decided in 7.3s: DIFFERENT_ENTITY 463, REVIEW 231, SAME_ENTITY 125 |
+| Official validator | `819 lines read, 0 problems`; `50 hits, 50 right decisions, 0 unsafe clearances`; `decision score 100.0`; reason code and customer record `100%` |
+| Compared with handoff baseline | `1 of 819 hits changed decision or reason code, 0 moved into DIFFERENT_ENTITY, 1 changed only in reason or evidence` |
+| Stress | `new clearances caused by harder text: none`, including the added relative-DOB and fine-amount cases |
+| Strict reproducibility | Scored and explain files byte-identical across five runs; working `output/dev.jsonl` equals a fresh run; exit 0 |
+| Viewer sample | `the sample is up to date` |
+| Tools unit suite | `Ran 28 tests`, `OK` |
+| Python compatibility | All `system/**/*.py` files parse with Python 3.8 syntax; no actual Python 3.8 interpreter run locally |
+| Scored output SHA-256 | `a46bfc2187f8bd1440b6ad5b825e703a0a6753a39260ecc92519b25201bef61b` |
+
+The loop's six gates printed:
+
+```text
+tests       PASS     Ran 246 tests in 0.322s, OK
+moved       PASS     1 of 819 hits changed decision or reason code, 0 moved into DIFFERENT_ENTITY, 1 changed only in reason or evidence
+labels      PASS     50 hits, 50 right decisions, 0 unsafe clearances
+stress      PASS     new clearances caused by harder text: none
+same twice  PASS     hits whose decision or reason code differs between runs: 0; scored files byte-identical across 5 runs: yes
+public list PASS     18 of 18 demo cases came out as built
+```
+
+## Historical main snapshot
+
 **Snapshot: 15:30 London time, 21 November 2026. The decision code under `system/screening/` last
 changed at commit `93e96a0`, the merge of pull request 5.**
 

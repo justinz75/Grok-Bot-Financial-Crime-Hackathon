@@ -165,6 +165,8 @@ class Briefing(object):
                 if not customer.dob or not hit.dobs:
                     return "Needs a person: %s, but there is no date of birth to compare." % lead
                 if raw_dob == "mismatch":
+                    if hit.dob_context_uncertain:
+                        return "Needs a person: %s, but the listing's birth date is not clearly about the listed person." % lead
                     return "Needs a person: %s, but the customer's date of birth could not be verified." % lead
                 return "Needs a person: %s, but the birth years are one year apart." % lead
             if st["dob"] == "agree":
@@ -215,6 +217,9 @@ class Briefing(object):
             article = "" if plural else ("an " if hit_company else "a ")
             out.append("The hit gives %s%s%s only, so the day and month could not be compared."
                        % (article, hw["year"], plural))
+        if hit.dob_context_uncertain:
+            out.append("A date or number in the hit's prose is not clearly the listed person's birth date or age; "
+                       "it may block a clearance but cannot establish a birth-date contradiction.")
         if not hit.countries:
             out.append("No country is tied to the hit.")
         if not customer.countries:
@@ -273,6 +278,10 @@ class Briefing(object):
                 out.append("A %s for both the customer and the %s would settle it: neither has one, so the "
                            "two cannot be compared." % (date, listed))
             elif raw_dob == "mismatch":
+                if hit.dob_context_uncertain:
+                    out.append("A birth date explicitly attached to the listed person would settle the date comparison; "
+                               "the current prose cannot establish a contradiction.")
+                    return out
                 out.append("A readable approved identity check would settle it: the customer's %s on file (%s) "
                            "contradicts the hit's (%s), but an unverified date is not allowed to clear a hit."
                            % (date, D.show(customer.dob), _join([D.show(d) for d in hit.dobs], "or")))
