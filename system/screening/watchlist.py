@@ -64,7 +64,7 @@ def build_hit(row, store):
     hit_id = text(row.get("hit_id"))
 
     dobs, origin, used = D.parse_dates(row.get("dobs")), None, []
-    clearance_dobs = None
+    clearance_dobs, clearance_sources = None, []
     if dobs:
         origin = "listed"
     elif kind != COMPANY:  # for companies only the dobs field is an incorporation date
@@ -78,10 +78,11 @@ def build_hit(row, store):
             phrase = X.listing_phrase(row.get("primary_category"), row.get("categories"))
             search_dobs, search_sources, first_bucket = _search_dobs(name, store, phrase, countries)
             if not clearance_dobs:
-                clearance_dobs, _ = X.search_birth(first_bucket, phrase, countries)
+                clearance_dobs, clearance_sources = X.search_birth(first_bucket, phrase, countries)
             if not dobs and search_dobs:
                 dobs, used, origin = search_dobs, search_sources, "search"
 
     reports = X.dated_reports(notes)
     return Hit(hit_id, kind, name, aliases, dobs, origin, used, countries, unknown,
-               reports[0] if reports else None, D.parse_date(row.get("deceased_date")), clearance_dobs)
+               reports[0] if reports else None, D.parse_date(row.get("deceased_date")),
+               clearance_dobs, clearance_sources)

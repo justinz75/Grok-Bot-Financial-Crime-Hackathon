@@ -54,6 +54,12 @@ def dated_reports(profile_notes):
 
 # -- birth dates in prose --------------------------------------------------------
 _BORN = re.compile(r"\b(?:born|date of birth|birth ?date|year of birth|birth year|d\.?o\.?b\.?)\b", re.I)
+# Proper names between "born" and the date, as in "born in Oslo on 14 June".
+_PLACE_WORD = r"[^\W\d_][\w’'-]*"
+_BIRTHPLACE = re.compile(
+    r"^\s*(?i:in|at)\s+(?P<place>%s(?:[ ,]+%s)*?)\s+(?i:on|in)\s+"
+    % (_PLACE_WORD, _PLACE_WORD)
+)
 _NOT_AGE = r"(?!\s*(?:%|percent|per\b|years?\s+(?:in|of\s+(?!age)|after|before|later|ago|imprison)|months?|days?|weeks?|hours?|times|counts?)|[.,/-]\d|\w)"
 _AGE_PATTERNS = [re.compile(p, re.I) for p in (
     r"(?<![\d.,/$-])(\d{1,3})[\s-]*(?:years?|yrs?)[\s-]*old\b",
@@ -127,9 +133,9 @@ def profile_birth(profile_notes, opening_line_only=False):
             return [], None
         return birth_from_text(line)
 
-    # A provider's structured record or a report belongs to a separate source.
+    # A provider record can give a date inline, but later fields are a separate source.
     if re.match(r"name\s*:", opening, re.I):
-        return [], None
+        opening = opening.splitlines()[0]
     opening = re.split(r"(?:^|\n|(?<=[.!?]) +)\s*according\b", opening, maxsplit=1, flags=re.I)[0]
     opening = " ".join(opening.split())
 
@@ -139,6 +145,12 @@ def profile_birth(profile_notes, opening_line_only=False):
             after = after.lstrip(".")
         after = re.sub(r"^\s*(?:[:=–-]\s*)?(?:(?:is|was|on|in|at)\b\s+)*", "", after)
         dates = D.find_dates(after, bare_years=True)
+        if cue.group().lower() == "born" and (not dates or dates[0][1] != 0):
+            place = _BIRTHPLACE.match(opening[cue.end():])
+            if place:
+                words = place["place"].replace(",", " ").split()
+                if all(word[0].isupper() or word in {"de", "del", "la", "of"} for word in words):
+                    dates = D.find_dates(opening[cue.end() + place.end():], bare_years=True)
         if dates and dates[0][1] == 0:
             return [dates[0][0]], "explicit"
 

@@ -66,7 +66,7 @@ separate explain file, and cannot create a clearance.
    match and never clears one.
 5. **Countries.** Take residence and nationality from every customer record and the document
    country from the latest approved check. Explicit travel-only mentions and superseded documents
-   can block a location clearance without establishing country agreement. Other country mentions
+   can block a location clearance when the hit is linked to that country. Other country mentions
    without a residence tie can also block a clearance when the hit is linked to that country.
 6. **Several people fit.** Each is decided separately. One shared decision is given; different
    decisions become `REVIEW` with `AMBIGUOUS_CUSTOMER_RECORD`. The customer is `AMBIGUOUS` either way.
@@ -94,15 +94,16 @@ the facts that decided it:
 
 | Ground | Evidence cited |
 |---|---|
-| Date of birth | The check or note that gave the customer's date, plus any search result or newly read profile paragraph that supplied the hit's date |
+| Date of birth | The check or note that gave the customer's date, plus any search result or newly read profile paragraph that supplied the hit's date, including any separate search results used to check the clearance |
 | Location mismatch | Every record that ties the customer to a country |
+| Precautionary country overlap | The established country records and the earlier approved checks or travel notes that blocked clearance |
 | Location agreement | The records that give the shared country |
 | Verified name mismatch | The identity check that gave the legal name |
 | Date of death | The hit's `deceased_date` field, written `H-xxxxxx#deceased_date` |
 
 The reason text opens with how the customer was found, then states the selected grounds with
 their values. The evidence list comes from those same grounds. When multiple candidates fit
-the alert, the reason shows the comparison for each candidate.
+the alert, the reason states one decisive comparison per candidate within the four-sentence limit.
 
 ## Staying the same from run to run
 

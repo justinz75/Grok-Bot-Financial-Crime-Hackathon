@@ -52,14 +52,20 @@ class CountryClearances(unittest.TestCase):
     def test_superseded_document_cannot_confirm_country(self):
         rid, alert = self.customer(verified=(self.name, self.dob, "Sweden"))
         applicant = self.folder.field("onboarding", "customer_id", rid, "kyc_applicant_id")
-        self.folder.check(applicant, self.name, self.dob, "Denmark", checked_at="2021-01-04")
+        old = self.folder.check(applicant, self.name, self.dob, "Denmark", checked_at="2021-01-04")
         latest = self.folder.tables["kyc_checks"][0]["check_id"]
         historical = self.folder.hit(alert, self.name, countries=["Denmark"])
         current = self.folder.hit(alert, self.name, [self.dob], ["Sweden"])
         historical_with_dob = self.folder.hit(alert, self.name, [self.dob], ["Denmark"])
         self.check(current, rid, "SAME_ENTITY", "NAME_DOB_MATCH", [latest])
-        self.check(historical, rid, "REVIEW", "INSUFFICIENT_DATA", [rid])
-        self.check(historical_with_dob, rid, "REVIEW", "INSUFFICIENT_DATA", [latest, rid])
+        self.check(historical, rid, "REVIEW", "INSUFFICIENT_DATA", [rid, latest, old])
+        self.check(historical_with_dob, rid, "REVIEW", "INSUFFICIENT_DATA", [latest, rid, old])
+        reason = self.folder.run()[historical]["reason"]
+        self.assertIn("Denmark", reason)
+        self.assertIn(old, reason)
+        self.assertNotIn("Nothing in the customer's records contradicts", reason)
+        unrelated_without_dob = self.folder.hit(alert, self.name, countries=["Finland"])
+        self.check(unrelated_without_dob, rid, "DIFFERENT_ENTITY", "LOCATION_MISMATCH", [rid, latest])
         unrelated = self.folder.hit(alert, self.name, [self.dob], ["Finland"])
         self.check(unrelated, rid, "REVIEW", "INSUFFICIENT_DATA", [latest, rid])
 
@@ -101,7 +107,12 @@ class CountryClearances(unittest.TestCase):
             rid, "The customer lived in Sweden. The customer travelled to Denmark for a holiday.",
         )
         hit = self.folder.hit(alert, "Veywick Loomworks", countries=["Denmark"], kind="Company")
-        self.check(hit, rid, "REVIEW", "INSUFFICIENT_DATA", [rid])
+        self.check(hit, rid, "REVIEW", "INSUFFICIENT_DATA", [rid, note])
+        reason = self.folder.run()[hit]["reason"]
+        self.assertIn(note, reason)
+        self.assertIn("Denmark", reason)
+        finland = self.folder.hit(alert, "Veywick Loomworks", countries=["Finland"], kind="Company")
+        self.check(finland, rid, "DIFFERENT_ENTITY", "LOCATION_MISMATCH", [rid, note])
         sweden = self.folder.hit(alert, "Veywick Loomworks", countries=["Sweden"], kind="Company")
         self.check(sweden, rid, "SAME_ENTITY", "NAME_LOCATION_MATCH", [note])
         residence = self.folder.note(rid, "The customer lived in Denmark from 2013 to 2017.")

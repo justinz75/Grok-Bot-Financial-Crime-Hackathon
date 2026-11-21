@@ -13,10 +13,12 @@ git branch -r                     # which task branches have been pushed
 
 If you change the state of a task, update this page in the same pull request.
 
-The `task/screening-improvements` draft groups watchlist DOB retrieval, country-clearance
-regressions, and scored reason and evidence alignment. On the draft branch the unit suite
-passed 222 tests and the official validator accepted all 819 development predictions.
-Compared with the predictions on `main`, no verdict, reason code or customer record changed.
+The `task/screening-improvements` draft includes the follow-up fixes from the PR #5 review.
+The unit suite passed 226 tests and the official validator accepted all 819 development
+predictions, with 50 right decisions on the practice labels. Compared with a fresh run on
+`main` at `7755807`, no verdict, reason code or customer record changed. The longest ambiguous
+reason on the draft dropped from 1555 to 941 characters, and all ambiguous reasons fit the
+four-sentence budget.
 
 ## Numbers to expect
 

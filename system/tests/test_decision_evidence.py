@@ -1,6 +1,8 @@
 """Scored reasons and evidence describe the same facts."""
 import unittest
 
+from screening.decide import REVIEW, SAME, Outcome, combine
+
 from test_pipeline import Folder
 
 
@@ -37,7 +39,7 @@ class DecisionEvidenceTests(unittest.TestCase):
         self.assertEqual(line["customer_record_id"], "AMBIGUOUS")
         self.assertEqual(line["evidence"], [second, check])
         self.assertIn("For record " + first + ", the customer's date of birth is 1972-06-12", line["reason"])
-        self.assertIn("for record " + second + ", the customer is linked only to Germany", line["reason"])
+        self.assertIn("For record " + second + ", the customer is linked only to Germany", line["reason"])
 
     def test_clearance_prefers_a_ground_shared_by_all_candidates(self):
         f = Folder()
@@ -51,7 +53,7 @@ class DecisionEvidenceTests(unittest.TestCase):
         self.assertEqual(line["reason_code"], "LOCATION_MISMATCH")
         self.assertEqual(line["evidence"], [first, second])
         self.assertIn("For record " + first + ", the customer is linked only to Germany", line["reason"])
-        self.assertIn("for record " + second + ", the customer is linked only to Canada", line["reason"])
+        self.assertIn("For record " + second + ", the customer is linked only to Canada", line["reason"])
         self.assertNotIn("1978-03-15", line["reason"])
 
     def test_confirmation_names_every_candidate_within_the_sentence_budget(self):
@@ -73,7 +75,18 @@ class DecisionEvidenceTests(unittest.TestCase):
         self.assertEqual(line["decision"], "SAME_ENTITY")
         self.assertEqual(line["reason_code"], "NAME_DOB_MATCH")
         self.assertEqual(line["customer_record_id"], "AMBIGUOUS")
-        self.assertEqual(line["evidence"], sorted(checks + [candidates[i][0] for i in (0, 2, 3)]))
+        self.assertEqual(line["evidence"], sorted(checks))
         for rid, dob in candidates:
-            self.assertIn("record %s, the customer's date of birth %s" % (rid, dob), line["reason"])
-        self.assertLessEqual(line["reason"].count(". "), 3)
+            self.assertIn("record %s, the name matches and birth dates agree (%s" % (rid, dob), line["reason"])
+        self.assertEqual(line["reason"].count(". "), 3)
+
+    def test_non_ground_reasons_reserve_a_sentence_for_resolution(self):
+        outcome = Outcome(REVIEW, ["INSUFFICIENT_DATA"], ["One.", "Two.", "Three.", "Four."], [])
+        self.assertEqual(outcome.scored_facts()[0], ["One.", "Two.", "Three."])
+
+    def test_unknown_record_is_described_as_unverified_details(self):
+        missing = Outcome(REVIEW, ["INSUFFICIENT_DATA"], ["The date is unknown."], [])
+        known = Outcome(SAME, ["NAME_DOB_MATCH"], ["The name and birth date match."], [], "CUS-000001")
+        outcome = combine([missing, known])
+        self.assertIn("For the unverified details, the date is unknown.", outcome.reason)
+        self.assertIn("For record CUS-000001, the name and birth date match.", outcome.reason)

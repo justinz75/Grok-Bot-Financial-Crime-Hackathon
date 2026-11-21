@@ -25,8 +25,7 @@ def _found_sentence(how, people):
     if not people:
         return "No customer record fits the %s, so only the screened details could be compared." % how
     if len(people) > 1:
-        records = ", ".join(rid for group, _ in people for rid in group)
-        return "%d different people fit the %s (records %s)." % (len(people), how, records)
+        return "%d different people fit the %s." % (len(people), how)
     group, first = people[0]
     others = [r for r in group if r != first]
     extra = ", and %s %s the same person" % (", ".join(others), "is" if len(others) == 1 else "are") if others else ""
@@ -156,7 +155,8 @@ class Run(object):
                     sentence = ("The rules found a contradiction (%s), but %s, so a person has to review it."
                                 % (outcome.code, why.rstrip(".")))
                     facts, evidence = outcome.scored_facts(outcome.code)
-                    final = Outcome(REVIEW, ["INSUFFICIENT_DATA"], facts + [sentence], evidence, outcome.record_id)
+                    final = Outcome(REVIEW, ["INSUFFICIENT_DATA"], facts + [sentence], evidence,
+                                    outcome.record_id, candidate_fact=(sentence, evidence))
                     break
         entry = {
             "record_ids": list(customer.record_ids),

@@ -284,7 +284,7 @@ class Resolver(object):
         store = self.store
         kind = self.features(first)[4] or screened.kind
         names, countries, unknown = [], {}, []
-        precautionary = set()
+        precautionary = {}
         # the names the bank holds for this person: every record's, and the screened one
         held = [parts for rid in group for parts in self.features(rid)[0]]
         if screened.parts:
@@ -325,7 +325,8 @@ class Resolver(object):
                 if got is None:
                     unread_check = unread_check or looks_like_check
                     travel = _travel_only_countries(body) if not looks_like_check else ()
-                    precautionary.update(travel)
+                    for code in travel:
+                        precautionary.setdefault(code, []).append(note_id)
                     for code in C.find_in_text(body, demonyms=looks_like_check):
                         if code not in travel:
                             tie(code, note_id)
@@ -360,7 +361,8 @@ class Resolver(object):
                 unknown.append(latest[5])
             for check in checks:
                 if check is not latest:
-                    precautionary.update(check[4])
+                    for code in check[4]:
+                        precautionary.setdefault(code, []).append(check[1])
         if dob is None:
             for rid in [first] + [r for r in group if r != first]:
                 declared = D.parse_date(store.customer[rid].get("dob"))
@@ -382,7 +384,8 @@ class Resolver(object):
         return Customer(kind, group, verified_name, verified_source, names, dob, dob_source,
                         countries, unknown, screened.at, primary=first, dob_can_clear=dob_can_clear,
                         name_can_clear=soft_source is None, possible_countries=possible,
-                        precautionary_countries=precautionary.difference(countries))
+                        precautionary_countries={code: sources for code, sources in precautionary.items()
+                                                 if code not in countries})
 
     def screened_only(self, screened):
         """No record fits: the screened details are all there is. They are declared,

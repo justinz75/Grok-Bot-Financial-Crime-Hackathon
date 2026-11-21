@@ -61,6 +61,37 @@ class WatchlistDobRecovery(unittest.TestCase):
         self.assertIn(hit + "#profile_notes", line["evidence"])
         self.assertNotIn(lower_priority, line["evidence"])
 
+    def test_birthplace_and_inline_profile_dates_keep_search_precedence(self):
+        for notes in (
+            "Mira Q Selwick was born in Oslo on 14 June 1982.",
+            "Mira Q Selwick was born in Oslo in 1982.",
+            "Name: Mira Q Selwick; DOB: 14 June 1982.",
+        ):
+            self.folder.hit(self.alert, self.name, countries=("Germany",), notes=notes)
+            self.folder.hit(self.alert, self.name, countries=("Canada",), notes=notes.replace("1982", "1962"))
+        lower_priority = [
+            self.folder.search("mira selwick", "A politically exposed person in Germany, born in 1962."),
+            self.folder.search("mira selwick", "A politically exposed person in Canada, born in 1982."),
+        ]
+        for row, line in zip(self.folder.tables["hits"], self.folder.run().values()):
+            with self.subTest(notes=row["profile_notes"]):
+                expected = "NAME_DOB_MATCH" if "1982" in row["profile_notes"] else "DOB_MISMATCH"
+                self.assertEqual(line["reason_code"], expected, line["reason"])
+                self.assertTrue(set(lower_priority).isdisjoint(line["evidence"]))
+
+    def test_wrapped_profile_clearance_cites_supporting_baseline_search(self):
+        hit = self.folder.hit(
+            self.alert, self.name, countries=("Germany",),
+            notes="Mira Q Selwick served on the commission.\nDate of birth: 6 March 1962.",
+        )
+        source = self.folder.search("mira selwick", "A politically exposed person in Germany, born in 1963.")
+        line = self.folder.run()[hit]
+        self.assertEqual(line["reason_code"], "DOB_MISMATCH", line["reason"])
+        self.assertIn(hit + "#profile_notes", line["evidence"])
+        self.assertIn(source, line["evidence"])
+        self.assertIn("1963", line["reason"])
+        self.assertIn(source, line["reason"])
+
     def test_one_search_key_can_supply_year_and_full_birth_date(self):
         hit = self.folder.hit(self.alert, self.name, countries=("Germany",))
         year = self.folder.search(
@@ -130,6 +161,9 @@ class WatchlistDobRecovery(unittest.TestCase):
             self.alert, self.name, countries=("Canada",),
             notes="Mira Q Selwick served on the commission.\nDate of birth: 6 March 1962.",
         )
-        self.folder.search("mira selwick", "A politically exposed person in Canada, born in 1982.")
+        source = self.folder.search("mira selwick", "A politically exposed person in Canada, born in 1982.")
         line = self.folder.run()[hit]
         self.assertEqual(line["decision"], "REVIEW", line["reason"])
+        self.assertIn(hit + "#profile_notes", line["evidence"])
+        self.assertIn(source, line["evidence"])
+        self.assertIn(source, line["reason"])
