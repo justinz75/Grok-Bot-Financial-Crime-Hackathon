@@ -42,12 +42,39 @@ def make(year, month=None, day=None):
     return PDate(year, month, day)
 
 
+class Ambiguous(PDate):
+    """A numeric date whose day and month could be either way round, such as 04/03/1980.
+
+    As a tuple it is the day-first reading, so it sorts, prints, indexes and agrees as
+    before. `other` is the month-first reading. A contradiction, and a date surely before
+    another, must hold under both readings: reading a date the wrong way round must never
+    clear a hit."""
+
+
+def _ambiguous(first, second):
+    d = Ambiguous(*first)
+    d.other = second
+    return d
+
+
+def readings(d):
+    """Every way a date can be read: one for most dates, two for an ambiguous one."""
+    other = getattr(d, "other", None)
+    if other is None:
+        return (d,)
+    return (PDate(*d), other)
+
+
 def _day_first(a, b, year):
-    """Numeric dates are day first; month first only when day first is impossible."""
+    """Numeric dates are day first; month first only when day first is impossible.
+    When both readings are possible and differ, the date is Ambiguous."""
     a, b = int(a), int(b)
     if a <= 12 < b:
         return make(year, a, b)
-    return make(year, b, a)
+    first = make(year, b, a)
+    if first is not None and a <= 12 and b <= 12 and a != b:
+        return _ambiguous(first, make(year, a, b))
+    return first
 
 
 _NUMERIC = [
@@ -96,11 +123,13 @@ def parse_dates(value):
     if value is None:
         return []
     items = value if isinstance(value, (list, tuple)) else re.split(r"[;|\n]", str(value))
-    out = []
+    out, seen = [], []
     for item in items:
         d = parse_date(item)
-        if d and d not in out:
+        # an ambiguous date is kept beside the plain date it equals as a tuple
+        if d and readings(d) not in seen:
             out.append(d)
+            seen.append(readings(d))
     return out
 
 
@@ -138,7 +167,12 @@ def find_dates(text, bare_years=False):
 # -- comparison ---------------------------------------------------------------
 def contradicts(customer, hit):
     """A hit birth date is contradicted when the customer's year is more than 1 year
-    outside it, or both give a month in the same year and the months (or days) differ."""
+    outside it, or both give a month in the same year and the months (or days) differ.
+    An ambiguous date contradicts only when every reading does."""
+    return all(_contradicts(c, h) for c in readings(customer) for h in readings(hit))
+
+
+def _contradicts(customer, hit):
     if abs(customer.year - hit.year) > 1:
         return True
     if customer.year == hit.year and customer.month and hit.month:
@@ -150,7 +184,8 @@ def contradicts(customer, hit):
 
 
 def agrees(customer, hit):
-    """Dates agree when the years are equal and every part both give is equal."""
+    """Dates agree when the years are equal and every part both give is equal.
+    An ambiguous date is compared as read, day first: agreement never clears a hit."""
     if customer.year != hit.year:
         return False
     if customer.month and hit.month:
@@ -180,13 +215,22 @@ def birth_years_from_age(age, when):
 
 def max_age_on(birth, when):
     """The oldest the person can have been on `when`, given what the dates leave open."""
+    return max(_max_age_on(b, w) for b in readings(birth) for w in readings(when))
+
+
+def _max_age_on(birth, when):
     b = (birth.month or 1, birth.day or 1)
     w = (when.month or 12, when.day or 31)
     return when.year - birth.year - (1 if w < b else 0)
 
 
 def surely_before(a, b):
-    """True when partial date a is before b whatever the missing parts are."""
+    """True when partial date a is before b whatever the missing parts are, and
+    whichever way round an ambiguous date is read."""
+    return all(_surely_before(x, y) for x in readings(a) for y in readings(b))
+
+
+def _surely_before(a, b):
     latest_a = (a.year, a.month or 12, a.day or 31)
     earliest_b = (b.year, b.month or 1, b.day or 1)
     return latest_a < earliest_b
