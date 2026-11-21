@@ -1,7 +1,7 @@
 # Where things stand
 
-**Snapshot: 13:52 London time, 21 November 2026. The code under `system/` last changed at commit
-`e3cf06a`.**
+**Snapshot: 14:18 London time, 21 November 2026. The decision code under `system/screening/` last
+changed at commit `7259c05`.**
 
 This page goes out of date quickly. The live picture is always in git:
 
@@ -15,13 +15,15 @@ If you change the state of a task, update this page in the same pull request.
 
 ## Numbers to expect
 
-Every figure below was printed by a command run on `main` at `e3cf06a`. If you see something
-different on the same commit, stop and report it.
+The tests, the run, the validator, the practice-label score and the five-run check below were
+run again at `dcc67c1`, which holds the decision code of `7259c05`. The country check and the
+workflow line are from the commits they name. If you see something different, stop and report it.
 
 | Command | What it printed |
 |---|---|
-| `python -m unittest discover -s system/tests` | `Ran 198 tests`, `OK` |
-| `python system/run DATA <file>` | `819 hits decided in 6.6s: DIFFERENT_ENTITY 464, REVIEW 230, SAME_ENTITY 125` |
+| `python -m unittest discover -s system/tests` | `Ran 202 tests`, `OK` |
+| `python tools/make_viewer_sample.py --check` | `the sample is up to date` |
+| `python system/run DATA <file>` | `819 hits decided in 6.8s: DIFFERENT_ENTITY 464, REVIEW 230, SAME_ENTITY 125` |
 | the same run, second line | `layers: score=on, reviewer=off, briefing=on, reader=off` |
 | the run twice, files compared | byte-identical |
 | a fresh run compared with the committed `output/dev.jsonl` | byte-identical |
@@ -59,8 +61,10 @@ The stress test and the layer comparison are reported in [system/README.md](../.
 | The model layers (`reader`, `reviewer`, the OpenRouter client), `tools/model_check.py`, and a 27th whole-run test | `38e0b75` |
 | The five-run reproducibility check `tools/repro.py` and the test workflow `.github/workflows/tests.yml` (task 03) | `9ae3d90` |
 | Country names the official list writes back to front, found by Teammate B's country check | `e3cf06a` |
+| A numeric date that can be read two ways (day first or month first) no longer clears a hit unless both readings contradict it, with 14 tests. It changed no decision on the development set | `7259c05` |
 | Teammate B's demo on public sanctions lists, `tools/make_public_demo.py` and `docs/data-sources.md` (pull request 2), with the three review fixes | `dedc2f7` |
 | Teammate A's review viewer, `viewer/index.html` (pull request 1), with the five review fixes | `395a9af` |
+| The viewer redesign: a built-in sample made by the real system (`tools/make_viewer_sample.py`, 4 tests), side-by-side cards, a review queue | `dcc67c1` |
 
 ## In progress
 
@@ -74,11 +78,22 @@ no API key was available, so a real model is still unmeasured. That measurement 
 The handoffs are `tasks/teammate-A-viewer.md`, `tasks/teammate-B-data.md` and
 `tasks/teammate-C-model-and-demo.md`.
 
-Teammate A's viewer is merged. The owner checked it in a browser on the sample files and on the
-real output: 819 hits (464 different, 125 same, 230 review) in 440 alerts, every hit with its
-explanation, `REVIEW` filtering to 230 hits and `AMBIGUOUS_CUSTOMER_RECORD` to 16, and no console
-errors. That check used a served copy; opening the file straight from disk was checked by its
-author, not by the owner.
+The viewer was redesigned by the owner at 14:20 (decision 11 in [decisions.md](decisions.md)).
+Checked in a browser at 1280 and 375 pixels wide, with no console errors:
+
+- On the built-in sample: 14 hits (7 different, 2 same, 5 review) in 12 alerts, and every kind
+  of card: date of birth, country, verified name, person against company, timing, death, a
+  company, no record found, and two possible customers.
+- On the real output: 819 hits (464 different, 125 same, 230 review) in 440 alerts, all 819
+  cards drawn without an error, the review queue holding 230 hits in order of evidence,
+  `REVIEW` filtering to 230 hits in 163 alerts and `AMBIGUOUS_CUSTOMER_RECORD` to 16.
+- A scored file with no explain file, an explain file from another run (it warns), and a file
+  with an invalid line (it names the line and shows nothing).
+
+Those checks used a served copy of the page. Opening the file straight from disk has not been
+checked since the redesign. A hosted copy needs GitHub Pages switched on in the repository
+settings (deploy from `main`, folder `/`); the page would then be at `/viewer/` under the
+site's address. Only the owner of the repository can do that.
 
 Teammate B's handoff is finished and merged. Two things about it are unverified: the demo has not
 been re-run on the real public list since the review fixes (it was tested on invented lists, and
