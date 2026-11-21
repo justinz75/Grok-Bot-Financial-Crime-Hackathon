@@ -47,6 +47,7 @@
     .status { margin: .65rem 0 0; color: var(--muted); font-size: .875rem; overflow-wrap: anywhere; }
     .status:empty { margin: 0; }
     .status[data-error] { color: #ff9a83; }
+    .status[data-warning] { color: #f2c675; }
     dd { margin: .4rem 0 0; font: 600 2rem/1 var(--mono); }
     .filters { display: grid; grid-template-columns: 1fr 1.25fr 1.5fr; gap: .75rem; }
     .filters label { margin-bottom: .4rem; font-size: .875rem; }
@@ -65,6 +66,7 @@
     .alert > summary:hover { background: #1d1d1d; }
     .alert > summary::marker { color: #ef8c70; }
     code, .bits { font-family: var(--mono); overflow-wrap: anywhere; }
+    .bits { white-space: nowrap; }
     .alert > summary code { margin-left: .35rem; font-weight: 700; }
     .alert-meta { float: right; display: inline-flex; align-items: center; gap: .7rem; color: var(--muted); font-size: .875rem; }
     .tag { display: inline-block; padding: .18rem .48rem; border: 1px solid currentColor; border-radius: 1rem; font-size: .8rem; font-weight: 600; line-height: 1.3; }
@@ -97,7 +99,7 @@
     .explain-section p { margin: .35rem 0; }
     .explain-section ul { margin: .25rem 0; padding-left: 1.2rem; }
     .explain-section li + li { margin-top: .2rem; }
-    .contribution { display: grid; grid-template-columns: minmax(6rem, .8fr) minmax(6rem, 1fr) 4rem minmax(8rem, 1.7fr); gap: .55rem; align-items: center; padding: .35rem 0; font-size: .875rem; }
+    .contribution { display: grid; grid-template-columns: minmax(6rem, .8fr) minmax(6rem, 1fr) 5.5rem minmax(8rem, 1.7fr); gap: .55rem; align-items: center; padding: .35rem 0; font-size: .875rem; }
     .bar { display: flex; height: .58rem; background: #252525; }
     .half { display: flex; width: 50%; }
     .half:first-child { justify-content: flex-end; border-right: 1px solid #959595; }
@@ -105,13 +107,14 @@
     .half:first-child .fill { background: #e28171; }
     .notice { margin: 0 0 .75rem; padding: .55rem .7rem; border-left: 2px solid var(--accent); background: #282017; color: #f2c675; }
     .explain-section .notice { margin-top: .65rem; }
+    .hit > .notice { margin: 1rem 0 0; }
 
     @media (max-width: 42rem) {
       main { width: calc(100% - 2rem); margin-top: 2rem; }
       .counts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
       .filters > :last-child { grid-column: 1 / -1; }
-      .contribution { grid-template-columns: minmax(5rem, 1fr) minmax(4rem, 1fr) 3.5rem; }
+      .contribution { grid-template-columns: minmax(5rem, 1fr) minmax(4rem, 1fr) 5.5rem; }
       .contribution > :last-child { grid-column: 1 / -1; color: var(--muted); }
     }
     @media (max-width: 32rem) {
@@ -187,9 +190,18 @@
     const decisionFilter = document.getElementById("decision-filter");
     const reasonFilter = document.getElementById("reason-filter");
     const idFilter = document.getElementById("id-filter");
-    const segmenter = typeof Intl.Segmenter === "function" ? new Intl.Segmenter("en", { granularity: "sentence" }) : null;
+    const explainStatus = document.getElementById("explain-status");
+    // The largest weight one fact carries. Every bar is drawn against it, so the same length
+    // means the same weight on every card.
+    const BAR_FULL = 14;
+    // How the system starts a sentence in a reason, and short forms that end in a full stop.
+    const sentenceOpeners = /^(?:The|Both|Nothing|Every|Each|They|No|Without|This|\d)/;
+    const shortForms = new Set(["inc", "ltd", "co", "corp", "st", "dr", "mr", "mrs", "ms", "jr", "sr", "mt", "vs"]);
     let alertGroups = [];
     let explainByAlert = new Map();
+    let explainCount = 0;
+    // Alerts the reader opened or closed by hand, by alert ID.
+    let manualOpen = new Map();
 
     function parseJsonl(text, validate) {
       const rows = [];
@@ -232,6 +244,61 @@
       return left < right ? -1 : left > right ? 1 : 0;
     }
 
+    // Split a reason into its sentences. A full stop after an initial or a short form
+    // ("Carl E. Andersen", "Acme Inc. (UK)") ends a sentence only when one of the system's
+    // own sentence openers follows it.
+    function sentencesOf(text) {
+      const parts = [];
+      const boundary = /[.!?]+(?=\s+\S)/g;
+      let start = 0;
+      let match;
+      while ((match = boundary.exec(text)) !== null) {
+        const end = match.index + match[0].length;
+        const word = text.slice(start, match.index).split(/\s+/).pop().replace(/^[^\p{L}\p{N}]+/u, "");
+        const short = /^\p{L}$/u.test(word) || /^(?:\p{L}\.)+\p{L}$/u.test(word) || shortForms.has(word.toLowerCase());
+        if (match[0] === "." && short && !sentenceOpeners.test(text.slice(end).trimStart())) continue;
+        parts.push(text.slice(start, end).trim());
+        start = end;
+      }
+      const rest = text.slice(start).trim();
+      if (rest) parts.push(rest);
+      return parts;
+    }
+
+    // An explain row written for another decision means the two files come from different runs.
+    function disagrees(row, hit) {
+      return (typeof row.decision === "string" && row.decision !== hit.decision) ||
+        (typeof row.reason_code === "string" && row.reason_code !== hit.reason_code);
+    }
+
+    // The explain status line: how many records, and how they line up with the scored file.
+    function describeExplain() {
+      explainStatus.removeAttribute("data-warning");
+      if (!explainCount) return "";
+      let text = `${explainCount} ${explainCount === 1 ? "record" : "records"} loaded.`;
+      if (!alertGroups.length) return text;
+      let total = 0;
+      let matched = 0;
+      let differing = 0;
+      for (const group of alertGroups) {
+        for (const hit of group.hits) {
+          total += 1;
+          const row = explainByAlert.get(hit.alert_id)?.get(hit.hit_id);
+          if (!row) continue;
+          matched += 1;
+          if (disagrees(row, hit)) differing += 1;
+        }
+      }
+      text += ` ${matched} of ${total} scored hits have an explanation.`;
+      if (differing) {
+        text += ` ${differing} ${differing === 1 ? "was" : "were"} written for a different decision, so this file may come from another run.`;
+      } else if (!matched) {
+        text += " This file may come from another run.";
+      }
+      if (differing || !matched) explainStatus.setAttribute("data-warning", "");
+      return text;
+    }
+
     function loadScored(rows) {
       const groups = new Map();
       for (const hit of rows) {
@@ -246,30 +313,34 @@
 
       decisionFilter.value = "";
       idFilter.value = "";
+      manualOpen = new Map();
       const codes = [...new Set(rows.map(hit => hit.reason_code))].sort(compareIds);
       reasonFilter.replaceChildren(new Option("All reason codes", ""),
         ...codes.map(code => new Option(code, code)));
       renderSummary(rows);
       queue.hidden = false;
       renderAlerts();
+      if (explainCount) explainStatus.textContent = describeExplain();
     }
 
     function loadExplain(rows) {
       explainByAlert = new Map();
+      explainCount = rows.length;
       for (const row of rows) {
         if (!explainByAlert.has(row.alert_id)) explainByAlert.set(row.alert_id, new Map());
         explainByAlert.get(row.alert_id).set(row.hit_id, row);
       }
-      if (!queue.hidden) renderAlerts(true);
+      if (!queue.hidden) renderAlerts();
+      return describeExplain();
     }
 
-    function renderAlerts(preserveExpansion = false) {
-      const previous = preserveExpansion
-        ? new Map(Array.from(alertList.children, alert => [alert.dataset.alertId, alert.open]))
-        : new Map();
+    function renderAlerts() {
       const decision = decisionFilter.value;
       const reasonCode = reasonFilter.value;
       const query = idFilter.value.trim().toLowerCase();
+      // With a filter on, the matching hits are what the reader asked for, so their alerts
+      // open. An alert opened or closed by hand keeps that state until another file is loaded.
+      const openByDefault = Boolean(decision || reasonCode || query) || alertGroups.length <= 25;
       const nodes = [];
       let hitCount = 0;
 
@@ -291,7 +362,8 @@
           element("span", `tag ${group.closed ? "positive" : "attention"}`, group.closed ? "Closed" : "Open"));
         heading.append(element("code", "", group.id), meta);
         alert.append(heading);
-        alert.open = previous.get(group.id) ?? (alertGroups.length <= 25 || Boolean(query));
+        alert.open = manualOpen.get(group.id) ?? openByDefault;
+        heading.addEventListener("click", () => manualOpen.set(group.id, !alert.open));
         alert.append(...hits.map(renderHit));
         nodes.push(alert);
       }
@@ -312,10 +384,7 @@
         element("code", "", hit.reason_code));
 
       const reason = element("p", "reason");
-      const sentences = segmenter
-        ? Array.from(segmenter.segment(hit.reason), part => part.segment.trim())
-        : hit.reason.split(/(?<=[.!?])\s+/);
-      for (const sentence of sentences) reason.append(element("span", "", sentence));
+      for (const sentence of sentencesOf(hit.reason)) reason.append(element("span", "", sentence));
 
       const customer = element("p", "customer", "Customer record ");
       customer.append(element(hit.customer_record_id === null ? "span" : "code", "",
@@ -334,7 +403,13 @@
       }
 
       const explanation = explainByAlert.get(hit.alert_id)?.get(hit.hit_id);
-      if (explanation) card.append(renderExplain(explanation));
+      if (explanation) {
+        if (disagrees(explanation, hit)) {
+          card.append(element("p", "notice", `This explanation was written for ${explanation.decision}, ` +
+            `${explanation.reason_code}, not for the decision above. The explain file may come from another run.`));
+        }
+        card.append(renderExplain(explanation));
+      }
       return card;
     }
 
@@ -348,6 +423,7 @@
         body.append(element("p", "notice", `Changed to review by the ${layer} layer: ${why}`));
       }
       const people = explanation.people;
+      if (!people.length) body.append(element("p", "", "No comparison was made for this hit."));
       if (people.length === 1) body.append(renderPerson(people[0]));
       if (people.length > 1) {
         const tabList = element("div", "person-tabs");
@@ -438,7 +514,6 @@
     function renderScore(score) {
       const section = element("section", "explain-section");
       section.append(element("h4", "", "Strength of evidence"), element("p", "", score.band));
-      const scale = Math.max(1, ...score.contributions.map(item => Math.abs(item.bits)));
       for (const { field, bits, detail } of score.contributions) {
         const row = element("div", "contribution");
         const bar = element("span", "bar");
@@ -446,11 +521,12 @@
         const left = element("span", "half");
         const right = element("span", "half");
         const fill = element("span", "fill");
-        fill.style.width = `${Math.abs(bits) / scale * 100}%`;
+        fill.style.width = `${Math.min(Math.abs(bits), BAR_FULL) / BAR_FULL * 100}%`;
         (bits < 0 ? left : right).append(fill);
         bar.append(left, right);
         row.append(element("span", "", field), bar,
-          element("span", "bits", `${bits > 0 ? "+" : ""}${bits} bits`), element("span", "", detail));
+          element("span", "bits", `${bits > 0 ? "+" : ""}${bits} ${Math.abs(bits) === 1 ? "bit" : "bits"}`),
+          element("span", "", detail));
         section.append(row);
       }
       if (score.conflict) {
@@ -484,6 +560,7 @@
         const [file] = input.files;
         onReset();
         status.removeAttribute("data-error");
+        status.removeAttribute("data-warning");
         input.removeAttribute("aria-invalid");
         status.textContent = file ? "Reading file…" : "";
         if (!file) return;
@@ -492,8 +569,8 @@
           const text = await file.text();
           if (currentSelection !== selection) return;
           const rows = parseJsonl(text, validate);
-          onLoad(rows);
-          status.textContent = `${rows.length} ${rows.length === 1 ? "record" : "records"} loaded.`;
+          const described = onLoad(rows);
+          status.textContent = described || `${rows.length} ${rows.length === 1 ? "record" : "records"} loaded.`;
         } catch (error) {
           if (currentSelection !== selection) return;
           status.setAttribute("data-error", "");
@@ -541,6 +618,7 @@
       queue.hidden = true;
       alertGroups = [];
       alertList.replaceChildren();
+      if (explainCount) explainStatus.textContent = describeExplain();
     });
     bindFilePicker("explain", isExplainRow, loadExplain, () => loadExplain([]));
     decisionFilter.addEventListener("change", () => renderAlerts());
