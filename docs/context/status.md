@@ -1,6 +1,6 @@
 # Where things stand
 
-**Snapshot: 13:44 London time, 21 November 2026. The code under `system/` last changed at commit
+**Snapshot: 13:52 London time, 21 November 2026. The code under `system/` last changed at commit
 `e3cf06a`.**
 
 This page goes out of date quickly. The live picture is always in git:
@@ -60,6 +60,7 @@ The stress test and the layer comparison are reported in [system/README.md](../.
 | The five-run reproducibility check `tools/repro.py` and the test workflow `.github/workflows/tests.yml` (task 03) | `9ae3d90` |
 | Country names the official list writes back to front, found by Teammate B's country check | `e3cf06a` |
 | Teammate B's demo on public sanctions lists, `tools/make_public_demo.py` and `docs/data-sources.md` (pull request 2), with the three review fixes | `dedc2f7` |
+| Teammate A's review viewer, `viewer/index.html` (pull request 1), with the five review fixes | `395a9af` |
 
 ## In progress
 
@@ -68,11 +69,16 @@ no API key was available, so a real model is still unmeasured. That measurement 
 
 | What | Who | Where | State at the snapshot |
 |---|---|---|---|
-| The review viewer, `viewer/index.html` | Teammate A | pull request 1, branch `task/viewer` | Open, not merged. The owner's review found no blocking bug and five small ones; they are not fixed yet. Not opened in a browser by the owner |
 | Model check, results table, demo script, submission text, video | Teammate C | branch `task/results`, not pushed yet | Handed off at 12:52. `tools/model_check.py` and `tools/ablate.py` are on `main`, so every job can start |
 
 The handoffs are `tasks/teammate-A-viewer.md`, `tasks/teammate-B-data.md` and
 `tasks/teammate-C-model-and-demo.md`.
+
+Teammate A's viewer is merged. The owner checked it in a browser on the sample files and on the
+real output: 819 hits (464 different, 125 same, 230 review) in 440 alerts, every hit with its
+explanation, `REVIEW` filtering to 230 hits and `AMBIGUOUS_CUSTOMER_RECORD` to 16, and no console
+errors. That check used a served copy; opening the file straight from disk was checked by its
+author, not by the owner.
 
 Teammate B's handoff is finished and merged. Two things about it are unverified: the demo has not
 been re-run on the real public list since the review fixes (it was tested on invented lists, and
