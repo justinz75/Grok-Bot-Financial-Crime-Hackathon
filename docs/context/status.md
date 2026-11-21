@@ -29,7 +29,7 @@ different, stop and report it.
 
 | Command | What it printed |
 |---|---|
-| `python -m unittest discover -s system/tests` | `Ran 233 tests`, `OK` |
+| `python -m unittest discover -s system/tests` | `Ran 234 tests`, `OK` |
 | `python tools/make_viewer_sample.py --check` | `the sample is up to date` |
 | `python system/run DATA <file>` | `819 hits decided in 8.3s: DIFFERENT_ENTITY 464, REVIEW 230, SAME_ENTITY 125` |
 | the same run, second line | `layers: score=on, reviewer=off, briefing=on, reader=off` |
