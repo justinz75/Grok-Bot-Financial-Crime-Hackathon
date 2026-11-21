@@ -1,7 +1,7 @@
 # Where things stand
 
 **Snapshot: 15:05 London time, 21 November 2026. The decision code under `system/screening/` last
-changed at the commit named "A one-part name that agrees stops a country clearance".**
+changed at commit `73ed186`.**
 
 This page goes out of date quickly. The live picture is always in git:
 
@@ -72,10 +72,10 @@ The stress test and the layer comparison are reported in [system/README.md](../.
 | Pull request 3: a check read out of a note clears a hit only when the note can be believed, a country a support note only mentions blocks a location clearance against it, 15 wording tests, five stress cases that add misleading text, and `tools/loop.py`. On the development set it changed no decision and the wording of one reason, so `output/dev.jsonl` was regenerated in the merge | `10b7575` |
 | A support note that is read as a check and not believed no longer stands in front of another check, with 3 tests. Found by the stress test on real data: it had turned 2 reviews into clearances and 11 clearances into matches. It changed nothing in `output/dev.jsonl` | `f91cb9e` |
 | The assurance pack, `tools/assure.py`: every alert as closed, for review or for compliance; the reviews and matches in the order to work them; the clearances a second person should read; the name rule tried on 14 variations of every listed name; counts of what the listings hold that the policy does not use; and a manifest of what was run. 28 tests in `tools/tests/`, and [assurance.md](../assurance.md) compares it with what a bank's screening function has. It reads what the system writes and changes no decision | `ada0873` |
-| A one-part name that agrees with the hit's, with an agreeing date of birth, is no longer cleared on a country difference: 3 tests. Found by the run on the public sanctions list. It changed nothing in `output/dev.jsonl` | this commit |
-| `tools/public_test.py`: the system run on every person and organisation of a real public sanctions list, with answers known by construction. Results in [results.md](../results.md) | this commit |
-| The traceability matrix, [traceability.md](../traceability.md) (task 05): 31 rules, each with its code and tests, no gaps | this commit |
-| The results page, [results.md](../results.md): the layer comparison, the stress test and the public-list test, as the commands printed them | this commit |
+| A one-part name that agrees with the hit's, with an agreeing date of birth, is no longer cleared on a country difference: 3 tests. Found by the run on the public sanctions list. It changed nothing in `output/dev.jsonl` | `73ed186` |
+| `tools/public_test.py`: the system run on every person and organisation of a real public sanctions list, with answers known by construction. Results in [results.md](../results.md) | `73ed186` |
+| The traceability matrix, [traceability.md](../traceability.md) (task 05): 31 rules, each with its code and tests, no gaps | `73ed186` |
+| The results page, [results.md](../results.md): the layer comparison, the stress test and the public-list test, as the commands printed them | `73ed186` |
 | Teammate B's demo on public sanctions lists, `tools/make_public_demo.py` and `docs/data-sources.md` (pull request 2), with the three review fixes | `dedc2f7` |
 | Teammate A's review viewer, `viewer/index.html` (pull request 1), with the five review fixes | `395a9af` |
 | The viewer redesign: a built-in sample made by the real system (`tools/make_viewer_sample.py`, 4 tests), side-by-side cards, a review queue | `dcc67c1` |
