@@ -15,5 +15,6 @@ whether the hit is the customer, a different person or company, or needs a perso
 - **From policy to code:** [docs/traceability.md](docs/traceability.md) maps every rule of the
   policy to the function that implements it and the tests that exercise it.
 - **Controls around the decision:** [docs/assurance.md](docs/assurance.md).
+- **Demo overview and architecture decisions:** [docs/demo-overview.md](docs/demo-overview.md).
 - **The 2-minute demo:** [docs/demo-script.md](docs/demo-script.md).
 - **Working on this repo, as a person or an AI agent:** start at [AGENTS.md](AGENTS.md).
