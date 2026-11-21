@@ -1,6 +1,6 @@
 # Where things stand
 
-**Snapshot: 13:39 London time, 21 November 2026. The code under `system/` last changed at commit
+**Snapshot: 13:43 London time, 21 November 2026. The code under `system/` last changed at commit
 `e3cf06a`.**
 
 This page goes out of date quickly. The live picture is always in git:
@@ -68,7 +68,7 @@ no API key was available, so a real model is still unmeasured. That measurement 
 | What | Who | Where | State at the snapshot |
 |---|---|---|---|
 | The review viewer, `viewer/index.html` | Teammate A | pull request 1, branch `task/viewer` | Open, not merged. The owner's review found no blocking bug and five small ones; they are not fixed yet. Not opened in a browser by the owner |
-| Country table check, clearance audit, demo on public lists | Teammate B | pull request 2, branch `task/data` | Open, not merged. Reviewed by a teammate at 13:31 and by the owner. The country check found one unresolved name, now fixed on `main`. The audit reports 16 of 16 sampled clearances supported; nobody has re-checked it row by row. One-part names are fixed on the branch (`9130199`). Two review findings are still open on the branch: a profile with several birth dates can turn the "different person" case into a match, and the default data folder is not the repo's `data/room/screening/dev` |
+| Country table check, clearance audit, demo on public lists | Teammate B | pull request 2, branch `task/data` | Open, not merged. Reviewed by a teammate at 13:31 and by the owner. Every review finding is now fixed on the branch: one-part names (`9130199`), profiles with several birth dates and the default data folder (`ecb7eb3`). Tested on invented lists only: all 18 decisions as expected, and profiles with one birth date give byte-identical output to before. Not re-run on the real public list since the fixes. The country check found one unresolved name, now fixed on `main`. The audit reports 16 of 16 sampled clearances supported; nobody has re-checked it row by row |
 | Model check, results table, demo script, submission text, video | Teammate C | branch `task/results`, not pushed yet | Handed off at 12:52. `tools/model_check.py` and `tools/ablate.py` are on `main`, so every job can start |
 
 The handoffs are `tasks/teammate-A-viewer.md`, `tasks/teammate-B-data.md` and
