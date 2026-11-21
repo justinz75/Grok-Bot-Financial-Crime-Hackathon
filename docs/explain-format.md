@@ -73,3 +73,72 @@ Dates are text: `1965-03-28`, `1965-03` or `1965`. Anything unknown is `null` or
 ```json
 {"hit_id": "H-0000A1", "alert_id": "A-0000A1", "decision": "DIFFERENT_ENTITY", "reason_code": "DOB_MISMATCH", "customer_record_id": "CUS-000001", "rules": {"decision": "DIFFERENT_ENTITY", "reason_code": "DOB_MISMATCH"}, "changed_by": null, "layers": {"score": "on", "briefing": "on", "reader": "off", "reviewer": "off"}, "people": [{"record_ids": ["CUS-000001"], "decision": "DIFFERENT_ENTITY", "reason_code": "DOB_MISMATCH", "all_codes": ["DOB_MISMATCH"], "customer": {"kind": "person", "verified_name": "LARS HOLM", "verified_source": "KYC-0000A1", "names": ["Lars Holm"], "dob": "1977-12-13", "dob_source": "KYC-0000A1", "countries": [{"code": "DE", "name": "Germany", "sources": ["CUS-000001", "KYC-0000A1"]}]}, "hit": {"kind": "person", "name": "Holm, Lars", "aliases": [], "dobs": ["1951"], "dob_origin": "listed", "countries": [{"code": "DE", "name": "Germany"}], "earliest_report": null, "death": null}, "states": {"name": "agree", "dob": "mismatch", "location": "agree"}, "score": {"bits": -4.9, "band": "some evidence of a different one", "contributions": [{"field": "name", "state": "agree", "bits": 6.2, "detail": "Both parts match; about 1 customer in 70 shares them"}, {"field": "date of birth", "state": "mismatch", "bits": -12.4, "detail": "1977 against 1951: 26 years apart"}, {"field": "country", "state": "agree", "bits": 1.3, "detail": "Germany, shared by about 2 customers in 5"}], "conflict": false}, "briefing": {"headline": "Different person: born 26 years apart.", "decided_by": ["Verified date of birth 1977-12-13 (KYC-0000A1) against the hit's listed 1951"], "missing": [], "would_settle": [], "strength": "one ground, from a verified identity check", "caveats": ["The name and the country agree; only the date of birth separates them."]}, "review": null}]}
 ```
+
+## Policy-gap follow-up
+
+The explain file includes a hit-level `gaps` object and a `gaps` list for each candidate in
+`people`. The hit object records the table version, the context snapshot ID, version and
+SHA-256 (or null), the primary disposition and next action, incomplete context fields, and
+all matching rows in precedence order. Each row includes its register IDs, input observations
+and source references, the assumption, the consequence if wrong, and the next action.
+`complete` means the table had enough context to select a disposition without an unknown
+fallback. Analyst completion is tracked outside this file. Candidate indicators retain their
+record references even when every candidate yields the same scored identity result.
+
+The built-in viewer sample includes an invented urgent payment for Anna Petrova. Her scored
+identity remains `REVIEW`. The viewer displays the primary follow-up and expands its evidence,
+assumptions and secondary actions. Older explain files still open.
+
+### Private operating context
+
+Without operating context, missing exposure fields are reported as unknown and the table
+retains identity review or compliance escalation where applicable. To provide context, set
+`SCREENING_GAP_CONTEXT` to a private JSON file and ask for explain output:
+
+```sh
+SCREENING_GAP_CONTEXT=/private/context.json python system/run DATA scored.jsonl run.explain.jsonl
+```
+
+Here is a minimal invented snapshot. It can trigger urgency on a `REVIEW` or `SAME_ENTITY`
+hit while retaining a secondary action for missing context. The `cases` keys are exact hit IDs.
+
+```json
+{
+  "profile_id": "example-payments",
+  "version": "1",
+  "as_of": "2026-11-21",
+  "institution_type": "fintech",
+  "cases": {
+    "H-EXAMPLE": {
+      "availability": {
+        "status": "verified",
+        "value": "imminent",
+        "source_ref": "OPS-EXAMPLE",
+        "valid_from": "2026-11-21",
+        "valid_until": "2026-11-21"
+      }
+    }
+  }
+}
+```
+
+`institution_type` is optional metadata. The engine validates the structure, reference
+presence and date window of source attestations. Operations supplies and verifies the
+underlying evidence. Use opaque references with no secrets. The context loader recognises
+`declared`, `conflicting` and `unknown` statuses as unresolved. A `not_applicable` value also
+requires a sourced `reason`. Invalid input is reported in the explanation.
+
+| Verified field | Values |
+|---|---|
+| `product_custody` | `onboarding`, `payment`, `other` |
+| `legal_scope` | `assessed`, `not_applicable` |
+| `availability` | `imminent`, `scheduled`, `already_available`, `not_applicable` |
+| `effective_gate`, `recall_available` | boolean or `not_applicable` |
+| `relationship` | `direct`, `intermediary`, `other` |
+| `chain_assessment`, `ownership_assessment` | `complete`, `unresolved`, `not_applicable` |
+| `list_quality`, `identity_quality` | `adequate`, `unresolved` |
+| `reviewer_available` | boolean |
+| `premise_concern` | `none` or `R01`, `R02`, `R03`, `R04`, `R10`, `R11`, `R16` for a documented unresolved concern |
+
+Follow-up is advisory. Compliance and operations own any action on a payment or listing.
+See the [decision table and register](context/policy-gaps.md#deterministic-operational-table).

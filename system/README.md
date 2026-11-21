@@ -353,3 +353,10 @@ built, 138 went to review instead, 12 to a match, and none was cleared that shou
 [docs/results.md](../docs/results.md) has the table and what the exceptions are. The run found
 one gap in the rules, closed since: a one-part name that agrees with the hit's, with an agreeing
 date of birth, was cleared on a country difference. It is a review.
+
+## Policy-gap follow-up
+
+When an explain file is requested, the engine records the evidence, assumptions, risks and
+analyst actions for gaps in the identity policy. Set `SCREENING_GAP_CONTEXT` to supply private
+operating context per hit. The decision table runs after the scored identity result is fixed.
+[Explain format and configuration](../docs/explain-format.md#policy-gap-follow-up).
