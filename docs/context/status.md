@@ -1,6 +1,6 @@
 # Where things stand
 
-**Snapshot: 15:13 London time, 21 November 2026. The decision code under `system/screening/` last
+**Snapshot: 15:15 London time, 21 November 2026. The decision code under `system/screening/` last
 changed at commit `73ed186`.**
 
 This page goes out of date quickly. The live picture is always in git:
@@ -109,10 +109,16 @@ measured 5 with the data at commit `463f981`, at 15:12:
   of 50. The two that differ are the labelled hits whose customer is `AMBIGUOUS`: the reference
   cites the identity checks that tie each candidate to the shared country, and the branch cites
   the customer records only.
-- The branch was cut before `73ed186`, so it does not have the one-part-name rule, and
-  `system/screening/decide.py` will conflict. `python tools/public_test.py --people 30000
-  --companies 30000` on the branch prints the same table as on `main` except for that rule:
-  `cleared when it should not be: 21`, all 21 in the row for one-part names in another country.
+- On `python tools/public_test.py --people 30000 --companies 30000` the branch printed the same
+  table as `main`, apart from the 21 one-part-name cases that `73ed186` fixed. At 15:09 the
+  teammate merged `main` into the branch (`c8b6056`), which brings that rule in. That commit
+  has not been run with the data by the owner's session. Its committed `output/dev.jsonl`
+  still equals the reference evidence on 48 of 50.
+- Where the two differ: for a hit with several possible customers that all lead to a review,
+  `main` cites every record behind each candidate's facts, including the identity checks
+  that give the shared country. The branch keeps only the closing sentence and the customer
+  records. Keeping each candidate's full evidence, as `combine` on `main` does, would
+  restore the two labels.
 
 It should not be merged until the evidence equals the reference on 50 of 50 again and
 `output/dev.jsonl` has been regenerated on top of the current `main`. Whoever merges it must run
