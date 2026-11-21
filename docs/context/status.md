@@ -1,7 +1,7 @@
 # Where things stand
 
-**Snapshot: 14:16 London time, 21 November 2026. The decision code under `system/screening/` last
-changed at commit `e3cf06a`.**
+**Snapshot: 14:18 London time, 21 November 2026. The decision code under `system/screening/` last
+changed at commit `7259c05`.**
 
 This page goes out of date quickly. The live picture is always in git:
 
@@ -15,14 +15,15 @@ If you change the state of a task, update this page in the same pull request.
 
 ## Numbers to expect
 
-Every figure below was printed by a command run on `main` at `e3cf06a`, except the test count,
-which is from `7194af3`. If you see something different on the same commit, stop and report it.
+The tests, the run, the validator, the practice-label score and the five-run check below were
+run again at `dcc67c1`, which holds the decision code of `7259c05`. The country check and the
+workflow line are from the commits they name. If you see something different, stop and report it.
 
 | Command | What it printed |
 |---|---|
-| `python -m unittest discover -s system/tests` | `Ran 173 tests`, `OK` |
+| `python -m unittest discover -s system/tests` | `Ran 187 tests`, `OK` |
 | `python tools/make_viewer_sample.py --check` | `the sample is up to date` |
-| `python system/run DATA <file>` | `819 hits decided in 6.6s: DIFFERENT_ENTITY 464, REVIEW 230, SAME_ENTITY 125` |
+| `python system/run DATA <file>` | `819 hits decided in 6.8s: DIFFERENT_ENTITY 464, REVIEW 230, SAME_ENTITY 125` |
 | the same run, second line | `layers: score=on, reviewer=off, briefing=on, reader=off` |
 | the run twice, files compared | byte-identical |
 | a fresh run compared with the committed `output/dev.jsonl` | byte-identical |
@@ -60,9 +61,10 @@ The stress test and the layer comparison are reported in [system/README.md](../.
 | The model layers (`reader`, `reviewer`, the OpenRouter client), `tools/model_check.py`, and a 27th whole-run test | `38e0b75` |
 | The five-run reproducibility check `tools/repro.py` and the test workflow `.github/workflows/tests.yml` (task 03) | `9ae3d90` |
 | Country names the official list writes back to front, found by Teammate B's country check | `e3cf06a` |
+| A numeric date that can be read two ways (day first or month first) no longer clears a hit unless both readings contradict it, with 14 tests. It changed no decision on the development set | `7259c05` |
 | Teammate B's demo on public sanctions lists, `tools/make_public_demo.py` and `docs/data-sources.md` (pull request 2), with the three review fixes | `dedc2f7` |
 | Teammate A's review viewer, `viewer/index.html` (pull request 1), with the five review fixes | `395a9af` |
-| The viewer redesign: a built-in sample made by the real system (`tools/make_viewer_sample.py`, 4 tests), side-by-side cards, a review queue | `7194af3` |
+| The viewer redesign: a built-in sample made by the real system (`tools/make_viewer_sample.py`, 4 tests), side-by-side cards, a review queue | `dcc67c1` |
 
 ## In progress
 
