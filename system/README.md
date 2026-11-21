@@ -281,4 +281,6 @@ five, and the rules as they are clear none.
 
 `python tools/loop.py DATA` is the loop to iterate with. It runs the tests, lists every hit a
 change moved against the committed predictions and fails if one moved into a clearance, scores
-the practice labels, then runs the stress test and the five-run check.
+the practice labels, then runs the stress test and the five-run check. Last, when
+`data/public_demo` exists, it checks the public sanctions demo, whose answers are known by
+construction.

@@ -14,9 +14,14 @@ and data/screening/dev. With no data at all, only the first step runs: it needs 
     3 labels      ROOM/validate.py on the fresh run, scored on the practice labels
     4 stress      tools/stress.py: text taken away or added must never clear a hit
     5 same twice  tools/repro.py: five fresh runs must be byte-identical
+    6 public list the demo folder tools/make_public_demo.py builds from real public
+                  sanctions profiles and invented customers (docs/data-sources.md). Each
+                  profile has three customers whose answers are known by construction:
+                  the same person, a different date of birth, no date of birth
 
---quick stops after step 3. Steps 2 to 5 call the repo's own tools, so they measure
-whatever those tools measure today. The exit code is 1 when any step fails.
+--quick stops after step 3. Step 6 needs only data/public_demo, not the hackathon data.
+Steps 2 to 6 call the repo's own tools, so they measure whatever those tools measure
+today. The exit code is 1 when any step fails.
 
 How to iterate with it:
 
@@ -43,6 +48,9 @@ ROOT = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 COMMITTED = os.path.join(ROOT, "output", "dev.jsonl")
 CLEARED = "DIFFERENT_ENTITY"
 SHOWN = 40  # changed hits listed before the rest are only counted
+PUBLIC_DEMO = os.path.join(ROOT, "data", "public_demo")
+# what tools/make_public_demo.py builds for every profile, in this order
+PUBLIC_EXPECTED = [("SAME_ENTITY", None), ("DIFFERENT_ENTITY", "DOB_MISMATCH"), ("REVIEW", "INSUFFICIENT_DATA")]
 
 
 def find_data(given):
@@ -149,6 +157,27 @@ def step_repro(data):
     return code == 0, "; ".join(kept[:2]) or (lines_of(text) or ["no output"])[-1]
 
 
+def step_public(folder):
+    if not os.path.isfile(os.path.join(PUBLIC_DEMO, "hits.jsonl")):
+        return None, "no data/public_demo: build it with tools/make_public_demo.py (docs/data-sources.md)"
+    out = os.path.join(folder, "public.jsonl")
+    code, text = call([os.path.join("system", "run"), PUBLIC_DEMO, out])
+    if code != 0 or not os.path.isfile(out):
+        print(text)
+        return False, "system/run failed on data/public_demo with exit code %d" % code
+    with open(out, encoding="utf-8") as handle:
+        rows = [json.loads(line) for line in handle if line.strip()]
+    wrong = 0
+    for index, row in enumerate(rows):
+        decision, reason_code = PUBLIC_EXPECTED[index % len(PUBLIC_EXPECTED)]
+        if row["decision"] != decision or (reason_code and row["reason_code"] != reason_code):
+            wrong += 1
+            if wrong <= SHOWN:
+                print("   %s  expected %s %s, got %s %s" % (row["hit_id"], decision, reason_code or "",
+                                                           row["decision"], row["reason_code"]))
+    return wrong == 0, "%d of %d demo cases came out as built" % (len(rows) - wrong, len(rows))
+
+
 def main(argv):
     parser = argparse.ArgumentParser(description="Run every check in order and say what a change did.")
     parser.add_argument("data", nargs="?", help="the data folder, e.g. screening/dev")
@@ -191,6 +220,13 @@ def main(argv):
                     record("same twice", step_repro(data))
         finally:
             shutil.rmtree(folder, ignore_errors=True)
+
+    print("== 6 public list")
+    folder = tempfile.mkdtemp(prefix="loop-")
+    try:
+        record("public list", step_public(folder))
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)
 
     print("\n%-11s %-8s %s" % ("step", "result", "what it printed"))
     for name, result, detail in results:
