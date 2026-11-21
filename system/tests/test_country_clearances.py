@@ -59,7 +59,9 @@ class CountryClearances(unittest.TestCase):
         historical_with_dob = self.folder.hit(alert, self.name, [self.dob], ["Denmark"])
         self.check(current, rid, "SAME_ENTITY", "NAME_DOB_MATCH", [latest])
         self.check(historical, rid, "REVIEW", "INSUFFICIENT_DATA", [rid])
-        self.check(historical_with_dob, rid, "SAME_ENTITY", "NAME_DOB_MATCH", [latest])
+        self.check(historical_with_dob, rid, "REVIEW", "INSUFFICIENT_DATA", [latest, rid])
+        unrelated = self.folder.hit(alert, self.name, [self.dob], ["Finland"])
+        self.check(unrelated, rid, "REVIEW", "INSUFFICIENT_DATA", [latest, rid])
 
     def test_latest_approved_note_can_supersede_provider_document(self):
         rid, alert = self.customer(verified=(self.name, self.dob, "Norway"))

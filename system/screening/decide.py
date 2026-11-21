@@ -24,7 +24,7 @@ class Customer(object):
     def __init__(self, kind, record_ids=(), verified_name=None, verified_source=None,
                  names=(), dob=None, dob_source=None, countries=None,
                  unknown_countries=(), screened_at=None, primary=None, dob_can_clear=True,
-                 confirmable=True, name_can_clear=True):
+                 confirmable=True, name_can_clear=True, precautionary_countries=()):
         self.kind = kind
         self.dob_can_clear = dob_can_clear        # False when an identity check could not be read
         self.confirmable = confirmable            # False when no customer record was found
@@ -38,6 +38,7 @@ class Customer(object):
         self.dob_source = dob_source
         self.countries = dict(countries or {})    # code -> source ids
         self.unknown_countries = list(unknown_countries)
+        self.precautionary_countries = frozenset(precautionary_countries)
         self.screened_at = screened_at
 
 
@@ -150,7 +151,7 @@ def location_state(customer, hit):
         return "agree", shared
     if not customer.countries or not hit.countries:
         return "unknown", shared
-    if customer.unknown_countries or hit.unknown_countries:
+    if customer.unknown_countries or customer.precautionary_countries or hit.unknown_countries:
         return "unknown", shared
     return "mismatch", shared
 
@@ -223,6 +224,13 @@ def decide(customer, hit, rules):
 
     location, shared = location_state(customer, hit)
     name_and_dob_agree = name == "agree" and dob == "agree"
+    # Weak geographic evidence can block a clearance without establishing
+    # agreement when all countries established by the policy differ.
+    disjoint_with_precaution = (
+        location == "unknown" and customer.precautionary_countries
+        and not customer.unknown_countries and not hit.unknown_countries
+        and customer.countries and hit.countries
+    )
     # A new DOB source cannot remove the existing exception to location clearance.
     baseline_agreement = name == "agree" and clearance_dob == "agree"
     if location == "mismatch" and not (name_and_dob_agree or baseline_agreement):
@@ -252,7 +260,7 @@ def decide(customer, hit, rules):
     if customer.confirmable:
         if company and name == "agree" and location == "agree":
             return Outcome(SAME, ["NAME_LOCATION_MATCH"], sentences, evidence, record_id)
-        if not company and name_and_dob_agree and location != "mismatch":
+        if not company and name_and_dob_agree and location != "mismatch" and not disjoint_with_precaution:
             codes = ["NAME_DOB_MATCH"]
             if location == "agree":
                 codes.append("NAME_DOB_LOCATION_MATCH")
@@ -262,7 +270,7 @@ def decide(customer, hit, rules):
         sentences = sentences[:2] + [
             "The screened details are unverified and belong to no known record, so they can "
             "neither clear nor confirm the hit and a person has to review it."]
-    elif location == "mismatch":
+    elif location == "mismatch" or (name_and_dob_agree and disjoint_with_precaution):
         if name_and_dob_agree:
             sentences.append(
                 "Every country tied to the customer (%s) differs from every country tied to the hit (%s), "

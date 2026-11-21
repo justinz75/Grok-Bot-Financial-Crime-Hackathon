@@ -317,10 +317,6 @@ class Resolver(object):
             for check in checks:
                 if check is not latest:
                     precautionary.update(check[4])
-        # A travel mention or superseded document cannot establish agreement. If it
-        # was the only source for a code, keep location uncertain so dropping the
-        # old tie cannot create a clearance.
-        unknown.extend(sorted(precautionary.difference(countries)))
         if dob is None:
             for rid in [first] + [r for r in group if r != first]:
                 declared = D.parse_date(store.customer[rid].get("dob"))
@@ -336,7 +332,7 @@ class Resolver(object):
             dob_can_clear = False
         return Customer(kind, group, verified_name, verified_source, names, dob, dob_source,
                         countries, unknown, screened.at, primary=first, dob_can_clear=dob_can_clear,
-                        name_can_clear=soft_source is None)
+                        name_can_clear=soft_source is None, precautionary_countries=precautionary.difference(countries))
 
     def screened_only(self, screened):
         """No record fits: the screened details are all there is. They are declared,
