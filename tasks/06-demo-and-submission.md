@@ -16,7 +16,7 @@ the event site for the form's fields.
 2. Write `docs/demo-script.md`: a shot list for exactly 2 minutes, as a table with columns
    time, what is on screen, what is said, and the command that proves it. Use this order:
    - 0:00 to 0:15. The problem: a customer shares a name with a listed person. One sentence.
-   - 0:15 to 0:40. The run: `system/run`, 819 hits in about 6 seconds, no model, no network.
+   - 0:15 to 0:40. The run: `system/run`, 819 hits in about 8 seconds, no model, no network.
    - 0:40 to 1:10. One cleared hit, one confirmed hit, one sent to review, each with its reason
      and evidence IDs on screen. Use the three cases in `system/README.md`.
    - 1:10 to 1:30. `validate.py`: 50 of 50 practice labels, 0 unsafe clearances.

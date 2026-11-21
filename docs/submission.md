@@ -13,7 +13,7 @@ Track 2, sanctions screening
 
 ## What did you build?
 
-A screening engine that decides, for every watchlist hit, whether the listed person is the bank's customer, a different person, or a case for an analyst. It runs the bank's identity policy as code: it finds the customer across the bank's systems, gathers the listed person's facts from fields, profile text and search results, then clears only on a contradiction, confirms only on agreement and otherwise asks for review. Every decision names the rule that decided it and cites the records behind it. The rules decide, with no model, no network and only the Python standard library. On the 819 development hits it clears 464, confirms 125 and sends 230 to review in about 7 seconds, gets 50 of 50 practice labels right with 0 unsafe clearances, and writes identical files in 5 fresh runs. Damaging the text 14 ways creates no clearance. On a real public sanctions list, 232142 known-answer cases, none is wrongly cleared. A viewer shows each hit as a side-by-side card and queues the reviews with the one fact that would settle each.
+A screening engine that decides, for every watchlist hit, whether the listed person is the bank's customer, a different person, or a case for an analyst. It runs the bank's identity policy as code: it finds the customer across the bank's systems, gathers the listed person's facts from fields, profile text and search results, then clears only on a contradiction, confirms only on agreement and otherwise asks for review. Every decision names the rule that decided it and cites the records behind it. The rules decide, with no model, no network and only the Python standard library. On the 819 development hits it clears 464, confirms 125 and sends 230 to review in under 10 seconds, gets 50 of 50 practice labels right with 0 unsafe clearances, and writes identical files in 5 fresh runs. Damaging the text 14 ways creates no clearance. On a real public sanctions list, 232142 known-answer cases, none is wrongly cleared. A viewer shows each hit as a side-by-side card and queues the reviews with the one fact that would settle each.
 
 ## Links
 
@@ -37,10 +37,10 @@ A screening engine that decides, for every watchlist hit, whether the listed per
 
 | Number | Command | What it printed |
 |---|---|---|
-| 819, 464, 125, 230, about 7 seconds | `python system/run DATA output/dev.jsonl` | `819 hits decided in 6.9s: DIFFERENT_ENTITY 464, REVIEW 230, SAME_ENTITY 125` |
+| 819, 464, 125, 230, under 10 seconds | `python system/run DATA output/dev.jsonl` | `819 hits decided in 8.3s: DIFFERENT_ENTITY 464, REVIEW 230, SAME_ENTITY 125` |
 | 50 of 50, 0 unsafe | `python ROOM/validate.py --data DATA --output output/dev.jsonl --score DATA/practice_labels.jsonl` | `practice labels: 50 hits, 50 right decisions, 0 unsafe clearances` |
 | 5 runs | `python tools/repro.py DATA --runs 5 --strict` | `scored files byte-identical across 5 runs: yes` |
 | 14 ways | `python tools/stress.py DATA` | 14 rows, then `new clearances caused by harder text: none` |
 | 232142 | `python tools/public_test.py --people 30000 --companies 30000` | `232142 hits`, then `cleared when it should not be: 0` |
 
-The description is 1033 characters long (the form takes 20 to 1200).
+The description is 1034 characters long (the form takes 20 to 1200).

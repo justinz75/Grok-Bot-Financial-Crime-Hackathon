@@ -227,8 +227,8 @@ person's date of birth. The tables, and what is still missing, are in
 
 ## Time and cost
 
-About 6 seconds for the development set (819 hits, 72,265 customer records) on a laptop, and about
-8 seconds with the explain file. The default run makes no API calls, so it costs nothing.
+About 8 seconds for the development set (819 hits, 72,265 customer records) on a laptop, and about
+9 seconds with the explain file. The default run makes no API calls, so it costs nothing.
 
 ## Results on the practice labels
 

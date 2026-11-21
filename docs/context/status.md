@@ -1,7 +1,7 @@
 # Where things stand
 
-**Snapshot: 15:15 London time, 21 November 2026. The decision code under `system/screening/` last
-changed at commit `73ed186`.**
+**Snapshot: 15:30 London time, 21 November 2026. The decision code under `system/screening/` last
+changed at commit `93e96a0`, the merge of pull request 5.**
 
 This page goes out of date quickly. The live picture is always in git:
 
@@ -29,9 +29,9 @@ different, stop and report it.
 
 | Command | What it printed |
 |---|---|
-| `python -m unittest discover -s system/tests` | `Ran 208 tests`, `OK` |
+| `python -m unittest discover -s system/tests` | `Ran 233 tests`, `OK` |
 | `python tools/make_viewer_sample.py --check` | `the sample is up to date` |
-| `python system/run DATA <file>` | `819 hits decided in 6.9s: DIFFERENT_ENTITY 464, REVIEW 230, SAME_ENTITY 125` |
+| `python system/run DATA <file>` | `819 hits decided in 8.3s: DIFFERENT_ENTITY 464, REVIEW 230, SAME_ENTITY 125` |
 | the same run, second line | `layers: score=on, reviewer=off, briefing=on, reader=off` |
 | the run twice, files compared | byte-identical |
 | a fresh run compared with the committed `output/dev.jsonl` | byte-identical |
@@ -39,7 +39,7 @@ different, stop and report it.
 | the same with `--score DATA/practice_labels.jsonl` | `50 hits, 50 right decisions, 0 unsafe clearances`, `decision score 100.0`, `reason code 100%, customer record 100%` |
 | evidence list compared with the reference list on the practice labels | equal on 50 of 50 |
 | `python tools/repro.py DATA --runs 5 --strict` | 5 fresh processes with hash seeds `random`, 1, 2, 3, 4: `hits whose decision or reason code differs between runs: 0`, scored and explain files `byte-identical across 5 runs: yes`, `committed output/dev.jsonl equals a fresh run: yes`, exit code 0 |
-| the scored file's SHA-256, from the same command | `c23adcc75543dca9c8534cfe3b613edfa28a0e4921856885596c610dd9e97bc1` |
+| the scored file's SHA-256, from the same command | `4835e16dfcb7cd76d5a302535a7e0ffb7c60fe68b94f5538ada8efe4e8977749` |
 | `python tools/stress.py DATA` | 14 cases, `NEW CLEAR` 0 on every row, ending `new clearances caused by harder text: none`. The five cases that add misleading text printed 129, 10, 28, 41 and 40 before pull request 3, and 0, 0, 2, 0, 0 at its merge |
 | `python tools/loop.py DATA` | all six steps `PASS`, exit code 0: `0 of 819 hits changed decision or reason code, 0 moved into DIFFERENT_ENTITY, 0 changed only in reason or evidence`, and `18 of 18 demo cases came out as built` |
 | `python tools/public_test.py --people 30000 --companies 30000` on the same export | `sampled: 22772 people (21 with a one-part name) and 24265 organisations, 232142 hits, decided in 260.0s`, then `231992 of 232142 came out as built; 138 went to review instead, 12 to a match` and `cleared when it should not be: 0` |
@@ -83,6 +83,7 @@ The stress test and the layer comparison are reported in [system/README.md](../.
 | `tools/public_test.py`: the system run on every person and organisation of a real public sanctions list, with answers known by construction. Results in [results.md](../results.md) | `73ed186` |
 | The traceability matrix, [traceability.md](../traceability.md) (task 05): 31 rules, each with its code and tests, no gaps | `73ed186` |
 | The results page, [results.md](../results.md): the layer comparison, the stress test and the public-list test, as the commands printed them | `73ed186` |
+| Pull requests 4 and 5 from a teammate: the listed person's date of birth is also read from the rest of the opening paragraph and from every search key, where it can support a match or stop a clearance and never clears; a superseded document's country and a holiday are weak country evidence; a hit that several people fit explains each candidate. Merged with one fix from the owner's session: such a hit cites everything any candidate cites, as the reference labels do. Decisions, reason codes, customer records and evidence are unchanged on all 819 hits; 35 reasons are reworded, all on hits with several candidates | `93e96a0` |
 | Teammate B's demo on public sanctions lists, `tools/make_public_demo.py` and `docs/data-sources.md` (pull request 2), with the three review fixes | `dedc2f7` |
 | Teammate A's review viewer, `viewer/index.html` (pull request 1), with the five review fixes | `395a9af` |
 | The viewer redesign: a built-in sample made by the real system (`tools/make_viewer_sample.py`, 4 tests), side-by-side cards, a review queue | `dcc67c1` |
@@ -100,36 +101,21 @@ traceability matrix, the results page, the demo script and the submission text a
 | The submission form | Not sent. The text is in [submission.md](../submission.md); the personal details are the team's to fill in |
 | A hosted copy of the viewer | Needs GitHub Pages switched on in the repository settings, which only the repository's owner can do |
 
-**Two draft pull requests from a teammate are open and not merged.** Pull request 4 writes the
-scored reason and its evidence from the same grounds. Pull request 5 includes 4, reads the listed
-person's date of birth from more of the profile and from every search key, and treats a
-superseded document's country and a holiday as weak country evidence. The owner's session
-measured 5 with the data at commit `463f981`, at 15:12:
+Pull request 5, which contains pull request 4, was merged at 15:30 at the owner's request, after one
+fix. Measured with the data on the merged code before it reached `main`:
 
-- `python tools/loop.py DATA --baseline <main's output/dev.jsonl>`: `Ran 229 tests`, `0 of 819
-  hits changed decision or reason code, 0 moved into DIFFERENT_ENTITY, 35 changed only in reason
-  or evidence`, `50 hits, 50 right decisions, 0 unsafe clearances`, the same stress table as
-  `main` with `new clearances caused by harder text: none`, and five byte-identical runs.
-- All 35 changed reasons are on hits with several possible customers. They now describe each
-  candidate.
-- The cited evidence equals the reference list on 48 of the 50 practice labels. `main` has 50
-  of 50. The two that differ are the labelled hits whose customer is `AMBIGUOUS`: the reference
-  cites the identity checks that tie each candidate to the shared country, and the branch cites
-  the customer records only.
-- On `python tools/public_test.py --people 30000 --companies 30000` the branch printed the same
-  table as `main`, apart from the 21 one-part-name cases that `73ed186` fixed. At 15:09 the
-  teammate merged `main` into the branch (`c8b6056`), which brings that rule in. That commit
-  has not been run with the data by the owner's session. Its committed `output/dev.jsonl`
-  still equals the reference evidence on 48 of 50.
-- Where the two differ: for a hit with several possible customers that all lead to a review,
-  `main` cites every record behind each candidate's facts, including the identity checks
-  that give the shared country. The branch keeps only the closing sentence and the customer
-  records. Keeping each candidate's full evidence, as `combine` on `main` does, would
-  restore the two labels.
-
-It should not be merged until the evidence equals the reference on 50 of 50 again and
-`output/dev.jsonl` has been regenerated on top of the current `main`. Whoever merges it must run
-`python tools/loop.py DATA` on the merged code first.
+- As the teammate pushed it, the branch cited the reference evidence on 48 of the 50 practice
+  labels. With the fix it cites it on 50 of 50, and its evidence equals what `main` had on all
+  819 hits.
+- `python tools/loop.py DATA` against the predictions `main` had before the merge: no hit
+  changed decision or reason code, none moved into `DIFFERENT_ENTITY`, 35 changed in reason
+  only, the practice labels score 50 of 50, the stress test creates no clearance and five runs
+  are byte-identical.
+- `python tools/public_test.py --people 30000 --companies 30000` printed the same table as
+  before the merge.
+- One more check, not in a tool: with the opening line of every profile hard-wrapped at 60
+  characters, the code before the merge moved 15 decisions to review and the merged code 10.
+  Neither created a clearance.
 
 The handoffs were `tasks/teammate-A-viewer.md`, `tasks/teammate-B-data.md` and
 `tasks/teammate-C-model-and-demo.md`.

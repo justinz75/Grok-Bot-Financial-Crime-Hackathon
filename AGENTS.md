@@ -80,7 +80,7 @@ in this repo: see [docs/context/data.md](docs/context/data.md) for how to get it
 
 ```
 python -m unittest discover -s system/tests                        # every test, no data needed
-python system/run DATA output/dev.jsonl                            # the scored run, about 6 seconds
+python system/run DATA output/dev.jsonl                            # the scored run, about 8 seconds
 python system/run DATA output/dev.jsonl output/dev.explain.jsonl   # also write the explain file
 python ROOM/validate.py --data DATA --output output/dev.jsonl --score DATA/practice_labels.jsonl
 python tools/stress.py DATA                                        # reworded-text stress test

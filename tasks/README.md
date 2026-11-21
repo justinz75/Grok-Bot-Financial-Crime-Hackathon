@@ -69,7 +69,7 @@ must always pass the tests, because the last commit before 17:00 is what gets sc
 
 ```
 python -m unittest discover -s system/tests                      # unit tests, no data needed
-python system/run DATA output/dev.jsonl                          # the run, about 6 seconds
+python system/run DATA output/dev.jsonl                          # the run, about 8 seconds
 python ROOM/validate.py --data DATA --output output/dev.jsonl --score DATA/practice_labels.jsonl
 python tools/stress.py DATA                                      # damaged-text stress test
 ```

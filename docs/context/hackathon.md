@@ -41,7 +41,7 @@ Three things, all in a public GitHub repository:
    - It may use the Python 3 or Node.js standard libraries, or shell. No installed packages.
    - It may call a language model only through the OpenRouter API, with the key taken from
      `OPENROUTER_API_KEY`. The organisers set their own key when they test.
-   - A run should finish in under 30 minutes. Ours takes about 6 seconds.
+   - A run should finish in under 30 minutes. Ours takes about 8 seconds.
 2. **Predictions on the development set** in `output/dev.jsonl`, made by that system. The
    organisers run the system on the development set once to check the file really came from it,
    so the committed file must be what the current code produces.
