@@ -147,6 +147,7 @@ These are deliberate. Each one can cost a review and can never cost a clearance.
 | No customer record is found | The screened details can neither clear nor confirm. Only the entity type and a date of death, which need no record, still decide | `resolve.py`: `screened_only` |
 | A legal name or a date of birth was read by a model and not by the rules | It may support a match but may not clear, unless the reader is set to `enforce` | `Customer.name_can_clear`, `Customer.dob_can_clear` |
 | A hit cannot be processed at all | It gets a `REVIEW` line, never a silent clearance | `pipeline.py`: `_unprocessed` |
+| A numeric date reads either way round, such as 04/03/1980 | It is read day first for agreement, as before. A date-of-birth contradiction, a date of death before screening and a report before a company's incorporation must hold under both readings to clear | `dates.py`: `readings`, `contradicts`, `surely_before` |
 
 ## The eleven reason codes
 
