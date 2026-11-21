@@ -1,6 +1,6 @@
 # Where things stand
 
-**Snapshot: 13:43 London time, 21 November 2026. The code under `system/` last changed at commit
+**Snapshot: 13:44 London time, 21 November 2026. The code under `system/` last changed at commit
 `e3cf06a`.**
 
 This page goes out of date quickly. The live picture is always in git:
@@ -59,6 +59,7 @@ The stress test and the layer comparison are reported in [system/README.md](../.
 | The model layers (`reader`, `reviewer`, the OpenRouter client), `tools/model_check.py`, and a 27th whole-run test | `38e0b75` |
 | The five-run reproducibility check `tools/repro.py` and the test workflow `.github/workflows/tests.yml` (task 03) | `9ae3d90` |
 | Country names the official list writes back to front, found by Teammate B's country check | `e3cf06a` |
+| Teammate B's demo on public sanctions lists, `tools/make_public_demo.py` and `docs/data-sources.md` (pull request 2), with the three review fixes | `dedc2f7` |
 
 ## In progress
 
@@ -68,11 +69,15 @@ no API key was available, so a real model is still unmeasured. That measurement 
 | What | Who | Where | State at the snapshot |
 |---|---|---|---|
 | The review viewer, `viewer/index.html` | Teammate A | pull request 1, branch `task/viewer` | Open, not merged. The owner's review found no blocking bug and five small ones; they are not fixed yet. Not opened in a browser by the owner |
-| Country table check, clearance audit, demo on public lists | Teammate B | pull request 2, branch `task/data` | Open, not merged. Reviewed by a teammate at 13:31 and by the owner. Every review finding is now fixed on the branch: one-part names (`9130199`), profiles with several birth dates and the default data folder (`ecb7eb3`). Tested on invented lists only: all 18 decisions as expected, and profiles with one birth date give byte-identical output to before. Not re-run on the real public list since the fixes. The country check found one unresolved name, now fixed on `main`. The audit reports 16 of 16 sampled clearances supported; nobody has re-checked it row by row |
 | Model check, results table, demo script, submission text, video | Teammate C | branch `task/results`, not pushed yet | Handed off at 12:52. `tools/model_check.py` and `tools/ablate.py` are on `main`, so every job can start |
 
 The handoffs are `tasks/teammate-A-viewer.md`, `tasks/teammate-B-data.md` and
 `tasks/teammate-C-model-and-demo.md`.
+
+Teammate B's handoff is finished and merged. Two things about it are unverified: the demo has not
+been re-run on the real public list since the review fixes (it was tested on invented lists, and
+profiles with one birth date give byte-identical output to before), and the clearance audit, which
+reports 16 of 16 sampled clearances supported, has not been re-checked row by row.
 
 ## Not started, with nobody recorded against them
 
