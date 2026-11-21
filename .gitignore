@@ -1,0 +1,11 @@
+# Hackathon data is for event participants only: never commit it.
+data/
+dev/
+
+# API keys
+.env
+.env.*
+
+# Python
+__pycache__/
+*.pyc

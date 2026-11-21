@@ -1,0 +1,202 @@
+"""Date rules (POLICY.md principles 5 to 7).
+
+Dates are partial: a year, a year and month, or a full date. A missing part is
+unknown, never a mismatch.
+"""
+import calendar
+import re
+from collections import namedtuple
+
+PDate = namedtuple("PDate", "year month day")
+
+_MONTH_NAMES = (
+    "january february march april may june july august september october november december".split()
+)
+MONTHS = {}
+for _i, _name in enumerate(_MONTH_NAMES, 1):
+    MONTHS[_name] = _i
+    MONTHS[_name[:3]] = _i
+MONTHS["sept"] = 9
+
+MON = r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
+
+
+def make(year, month=None, day=None):
+    """A PDate, or None when the parts are not a real date."""
+    try:
+        year = int(year)
+        month = int(month) if month else None
+        day = int(day) if day else None
+    except (TypeError, ValueError):
+        return None
+    if not 1800 <= year <= 2100:
+        return None
+    if month is None:
+        return PDate(year, None, None)
+    if not 1 <= month <= 12:
+        return None
+    if day is None:
+        return PDate(year, month, None)
+    if not 1 <= day <= calendar.monthrange(year, month)[1]:
+        return None
+    return PDate(year, month, day)
+
+
+def _day_first(a, b, year):
+    """Numeric dates are day first; month first only when day first is impossible."""
+    a, b = int(a), int(b)
+    if a <= 12 < b:
+        return make(year, a, b)
+    return make(year, b, a)
+
+
+_NUMERIC = [
+    (re.compile(r"(\d{4})[-/.](\d{1,2})[-/.](\d{1,2})(?:[T ]\d.*)?$"), lambda m: make(m.group(1), m.group(2), m.group(3))),
+    (re.compile(r"(\d{1,2})[-/.](\d{1,2})[-/.](\d{4})$"), lambda m: _day_first(m.group(1), m.group(2), m.group(3))),
+    (re.compile(r"(\d{4})[-/.](\d{1,2})$"), lambda m: make(m.group(1), m.group(2))),
+    (re.compile(r"(\d{1,2})[-/.](\d{4})$"), lambda m: make(m.group(2), m.group(1))),
+    (re.compile(r"(\d{4})$"), lambda m: make(m.group(1))),
+]
+_TEXTUAL = [
+    (re.compile(r"(\d{1,2}) (%s) (\d{4})$" % MON), lambda m: make(m.group(3), MONTHS[m.group(2)], m.group(1))),
+    (re.compile(r"(%s) (\d{1,2}) (\d{4})$" % MON), lambda m: make(m.group(3), MONTHS[m.group(1)], m.group(2))),
+    (re.compile(r"(%s) (\d{4})$" % MON), lambda m: make(m.group(2), MONTHS[m.group(1)])),
+]
+
+
+def parse_date(value):
+    """Parse one date written in any of the bank's or the provider's formats."""
+    if value is None:
+        return None
+    if isinstance(value, PDate):
+        return value
+    if isinstance(value, (int, float)) and not isinstance(value, bool):
+        return make(int(value)) if float(value).is_integer() else None
+    text = str(value).strip()
+    if not text:
+        return None
+    for pattern, build in _NUMERIC:
+        m = pattern.match(text)
+        if m:
+            return build(m)
+    text = text.lower()
+    text = re.sub(r"(?<=\d)(?:st|nd|rd|th)\b", "", text)
+    text = re.sub(r"\bof\b", " ", text)
+    text = re.sub(r"[,.\-/]", " ", text)
+    text = " ".join(text.split())
+    for pattern, build in _TEXTUAL:
+        m = pattern.match(text)
+        if m:
+            return build(m)
+    return None
+
+
+def parse_dates(value):
+    """Every date in a multi-valued field such as a hit's dobs ('1996; 1997')."""
+    if value is None:
+        return []
+    items = value if isinstance(value, (list, tuple)) else re.split(r"[;|\n]", str(value))
+    out = []
+    for item in items:
+        d = parse_date(item)
+        if d and d not in out:
+            out.append(d)
+    return out
+
+
+# -- dates inside sentences ---------------------------------------------------
+_IN_TEXT = [
+    (re.compile(r"\b(\d{4})-(\d{2})-(\d{2})\b"), lambda m: make(m.group(1), m.group(2), m.group(3))),
+    (re.compile(r"\b(\d{1,2})[/.](\d{1,2})[/.](\d{4})\b"), lambda m: _day_first(m.group(1), m.group(2), m.group(3))),
+    (re.compile(r"\b(\d{1,2})-(\d{1,2})-(\d{4})\b"), lambda m: _day_first(m.group(1), m.group(2), m.group(3))),
+    (re.compile(r"\b(\d{1,2})(?:st|nd|rd|th)?(?:\s+of)?\s+(%s)\.?,?\s+(\d{4})\b" % MON, re.I),
+     lambda m: make(m.group(3), MONTHS[m.group(2).lower()], m.group(1))),
+    (re.compile(r"\b(%s)\.?\s+(\d{1,2})(?:st|nd|rd|th)?,?\s+(\d{4})\b" % MON, re.I),
+     lambda m: make(m.group(3), MONTHS[m.group(1).lower()], m.group(2))),
+    (re.compile(r"\b(%s)\.?,?\s+(?:of\s+)?(\d{4})\b" % MON, re.I), lambda m: make(m.group(2), MONTHS[m.group(1).lower()])),
+]
+_BARE_YEAR = re.compile(r"(?<![\d,.])\b(1[89]\d{2}|20\d{2})\b(?![\d]|,\d{3})")
+
+
+def find_dates(text, bare_years=False):
+    """Dates written inside a sentence, as (PDate, start, end), left to right."""
+    found, taken = [], []
+    patterns = list(_IN_TEXT)
+    if bare_years:
+        patterns.append((_BARE_YEAR, lambda m: make(m.group(1))))
+    for pattern, build in patterns:
+        for m in pattern.finditer(text):
+            if any(m.start() < e and s < m.end() for s, e in taken):
+                continue
+            d = build(m)
+            if d:
+                found.append((d, m.start(), m.end()))
+                taken.append((m.start(), m.end()))
+    return sorted(found, key=lambda item: item[1])
+
+
+# -- comparison ---------------------------------------------------------------
+def contradicts(customer, hit):
+    """A hit birth date is contradicted when the customer's year is more than 1 year
+    outside it, or both give a month in the same year and the months (or days) differ."""
+    if abs(customer.year - hit.year) > 1:
+        return True
+    if customer.year == hit.year and customer.month and hit.month:
+        if customer.month != hit.month:
+            return True
+        if customer.day and hit.day and customer.day != hit.day:
+            return True
+    return False
+
+
+def agrees(customer, hit):
+    """Dates agree when the years are equal and every part both give is equal."""
+    if customer.year != hit.year:
+        return False
+    if customer.month and hit.month:
+        if customer.month != hit.month:
+            return False
+        if customer.day and hit.day and customer.day != hit.day:
+            return False
+    return True
+
+
+def compare(customer, hit_dates):
+    """'agree' if one hit date agrees, 'mismatch' if every hit date is contradicted,
+    otherwise 'unknown'."""
+    if customer is None or not hit_dates:
+        return "unknown"
+    if any(agrees(customer, h) for h in hit_dates):
+        return "agree"
+    if all(contradicts(customer, h) for h in hit_dates):
+        return "mismatch"
+    return "unknown"
+
+
+def birth_years_from_age(age, when):
+    """Someone aged 45 in March 2019 was born in 1973 or 1974."""
+    return [make(when.year - age - 1), make(when.year - age)]
+
+
+def max_age_on(birth, when):
+    """The oldest the person can have been on `when`, given what the dates leave open."""
+    b = (birth.month or 1, birth.day or 1)
+    w = (when.month or 12, when.day or 31)
+    return when.year - birth.year - (1 if w < b else 0)
+
+
+def surely_before(a, b):
+    """True when partial date a is before b whatever the missing parts are."""
+    latest_a = (a.year, a.month or 12, a.day or 31)
+    earliest_b = (b.year, b.month or 1, b.day or 1)
+    return latest_a < earliest_b
+
+
+def show(d):
+    if d is None:
+        return ""
+    if d.day:
+        return "%04d-%02d-%02d" % (d.year, d.month, d.day)
+    if d.month:
+        return "%04d-%02d" % (d.year, d.month)
+    return "%04d" % d.year
