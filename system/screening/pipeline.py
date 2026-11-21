@@ -155,7 +155,8 @@ class Run(object):
                     change = {"layer": name, "why": why}
                     sentence = ("The rules found a contradiction (%s), but %s, so a person has to review it."
                                 % (outcome.code, why.rstrip(".")))
-                    final = Outcome(REVIEW, ["INSUFFICIENT_DATA"], [sentence], outcome.evidence, outcome.record_id)
+                    facts, evidence = outcome.scored_facts(outcome.code)
+                    final = Outcome(REVIEW, ["INSUFFICIENT_DATA"], facts + [sentence], evidence, outcome.record_id)
                     break
         entry = {
             "record_ids": list(customer.record_ids),
@@ -191,14 +192,15 @@ class Run(object):
                     o.record_id = AMBIGUOUS
                 elif count == 0:
                     o.record_id = None
+        sentences, evidence = outcome.scored_facts()
         line = {
             "hit_id": hit_id,
             "alert_id": alert_id or (text(alert.get("alert_id")) if alert else ""),
             "decision": outcome.decision,
             "reason_code": outcome.code,
             "customer_record_id": outcome.record_id,
-            "reason": " ".join(([found] if found else []) + outcome.sentences[:3]),
-            "evidence": outcome.evidence,
+            "reason": " ".join(([found] if found else []) + sentences),
+            "evidence": evidence,
         }
         if not explain:
             return line, None
