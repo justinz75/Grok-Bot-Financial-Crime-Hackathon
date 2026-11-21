@@ -136,3 +136,12 @@ expect are in [docs/context/status.md](docs/context/status.md).
 
 Report in the format at the end of `tasks/README.md`. Write commit messages as one imperative
 sentence that says what changed, like the ones already in `git log`.
+
+## Cases the policy does not cover
+
+[Policy-gap research](docs/context/policy-gaps.md) is a reconstructed register, not the
+missing original G01–G18 file described in the handoff. Its R IDs have no verified G mapping.
+`tools/gap_counts.py` emits aggregate research indicators only; counts are neither errors nor
+proposed decision changes. Operational disposition is separate from scored identity.
+No gaps runtime layer or bank/fintech profile is implemented or approved by this work; Justin's
+explicit go-ahead is required before runtime work. Keep participant records private.
