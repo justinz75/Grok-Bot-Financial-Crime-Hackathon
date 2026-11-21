@@ -204,64 +204,17 @@ have the reverse of a label-based risk ordering. The examples below vary evidenc
 no legal relief is inferred from institution type. The actual assignment's operating inputs
 are unknown. None of these exposure fields is counted by `gap_counts.py` as established data.
 
-## Concrete engine integration proposal (approval required)
+## Explain integration
 
-This proposal supersedes the preliminary seven-row sketch. It is a new design, not a recovered
-G-register or owner-approved change. H's bank/fintech profile names and proposed bank-only
-`enforce` behavior are historical, unverified proposals. **No operating profile in this design
-changes the scored identity decision**, including a DIFFERENT_ENTITY with a premise concern.
+The explain runtime implements version 1 of the table below. It evaluates the finalized
+scored row, source-linked candidate indicators, and the optional private operating context.
+The first matching row selects the primary disposition and the explain file retains secondary
+actions. See the [explain schema and context format](../explain-format.md#policy-gap-follow-up).
 
-After Justin's go-ahead, the proposed integration would be:
-
-1. Keep `Run.process` and its scored serialization as the identity authority. Finish and retain
-   the existing seven-field scored row before computing any operational annotation. Do not
-   pass operating settings into `Resolver`, `decide`, `combine`, the reader or any guard.
-2. Add a pure `annotate(identity, gap_evidence, operating_context, table_version)` function in
-   a separately approved `system/screening/layers/gaps.py`. It has no `guard` method, no network,
-   no model, no clock and no filesystem writes. Call it only when an explain output is requested,
-   after identity is fixed. Do not add it to enforcement iteration. Specific pipeline and
-   layer files require the owner's assignment before editing.
-3. Load a versioned, private operational-context JSON file at the boundary, separately from
-   participant identity data. References point to local evidence records, not secrets. Validate
-   enums, types, source references and a supplied as-of date. A missing, invalid, stale against
-   its supplied validity period, or conflicting value remains unknown. Freeze configuration
-   and source snapshot for the whole run. No `SCREENING_PROFILE` magic defaults.
-4. A profile is a versioned set of **verified exposures**, not a type label. Keep the label for
-   display, never as a predicate. All predicates below use explicit context. Log profile ID,
-   version, context hash and table version to explain only. Never copy private operational
-   context into the scored reason/evidence fields.
-5. Add `gaps` beside the existing per-person explain annotations, plus one hit-level disposition
-   aggregating all candidate people. Store every match; sort by fixed table priority, gap ID,
-   evidence reference and candidate reference. The highest-priority matched row selects the
-   primary next action. Retain every secondary action and unresolved field; unanimous identity
-   does not hide unresolved candidate evidence. Deduplicate exact evidence references.
-6. A future viewer only displays this annotation. README/explain-format updates, invented
-   tests and the viewer change need their own assigned files. Until then this document is the
-   only integration contract. These are next steps, not implemented features.
-
-Proposed match object (invented example, not an existing explain schema):
-
-```json
-{
-  "row": "T03", "gap": "R13", "candidate_ref": "synthetic-person-a",
-  "observations": [{"field": "legal_scope", "value": null,
-                    "status": "unknown", "source_ref": null}],
-  "missing_fields": ["legal_scope"],
-  "assumption_id": "A_SCOPE_UNRESOLVED",
-  "assumption": "Operational obligations have not been determined",
-  "authority": "operating_choice", "context_sources": ["O", "U"],
-  "wrong_assumption_cost": "The wrong screening or release procedure could be selected",
-  "next_action": "Ask the jurisdiction specialist to establish applicable scope",
-  "disposition": "CONTEXT_REQUIRED", "identity_mutated": false
-}
-```
-
-Every match must contain the gap ID, actual field/value or missing field, its source reference
-(null only when genuinely missing), assumption and justification from this register, authority
-class (`organiser_policy`, `external_guidance`, `operating_choice`), consequence if wrong and
-next action. A guidance link is context, not evidence that an actual exposure exists. The
-`identity_mutated` invariant is checked, not merely asserted. Unknown exceptions or new gap IDs
-must produce an explicit incomplete annotation with `UNKNOWN_CASE`, not silence or closure.
+The implementation records attestations for each hit. It validates context shape, values,
+references and validity windows. Actual operational facts and the underlying sources remain
+with operations. Reviewer availability and completed review are separate facts. A different-entity result with unresolved customer selection cannot lead to identity
+closure. Invalid attestations, unknown gap IDs and annotation exceptions produce UNKNOWN_CASE.
 
 ## Deterministic operational table
 
@@ -282,7 +235,7 @@ choose routing. Required data that is explicitly not applicable must have verifi
 | T01 | Scored SAME_ENTITY; R13/R15 | P7 establishes identity only; scored row is the source. | `COMPLIANCE_ESCALATION`: assess applicable listing/obligations; treating identity as authorisation could cause an incorrect business action. |
 | T02 | Scored SAME_ENTITY or REVIEW, or a clearance with a verified unresolved premise concern R10/R11; plus verified imminent external availability and no verified effective gate/recall | Waiting may lose effective control; use payment/custody evidence, not institution label. | `URGENT_SPECIALIST`: alert authorised operations/compliance now to assess control options; wrong timing assumptions could lose intervention opportunity. |
 | T03 | Any operational_required field unknown, declared-only, conflicting, invalid or past its supplied validity period; R12–R15 and any relevant R01–R11/R16 | Missing context cannot justify low exposure; use exact missing/invalid field paths. | `CONTEXT_REQUIRED`: obtain evidence and named owner; false low exposure could select the wrong workflow. |
-| T04 | Verified unresolved ownership/control concern or incomplete underlying/intermediary assessment despite supplied context; R12/R13 | Identity alone cannot settle wider exposure; use verified structure or chain assessment. | `SPECIALIST_ASSESSMENT`: obtain ownership/chain specialist determination; indirect or hidden-party exposure could persist. |
+| T04 | Verified unresolved ownership/control, chain, list-quality or identity-quality assessment; R12–R14 | Identity alone cannot settle wider exposure; use verified structure or chain assessment. | `SPECIALIST_ASSESSMENT`: obtain ownership/chain specialist determination; indirect or hidden-party exposure could persist. |
 | T05 | Scored REVIEW; R01–R09/R16 as observed, or R15 if no classified reason | P requires uncertainty referral; scored row and observed gap evidence are the sources. | `IDENTITY_REVIEW`: resolve the identity evidence under existing gate if evidenced and legally appropriate; wrong resolution could miss the customer. |
 | T06 | Clearance with a verified unresolved evidence conflict or premise concern; R01–R04/R10/R11/R16 | A concern requires explicit evidence beyond a proxy count; originals and analyst attribution are sources. | `SECOND_READER`: route to an independent authorised reviewer if verified available, otherwise designated alternate/unresolved queue; a proxy must never masquerade as an adjudicated defect. |
 | T07 | Clearance, no earlier match, complete verified/not-applicable context and all relevant controls assessed complete | Identity closure is local to this alert; scored row and completed assessments are sources. | `IDENTITY_CLOSED`: record closure and residual caveats; this is not transaction permission. An inaccurate completion assertion could conceal unresolved controls. |
@@ -298,9 +251,8 @@ No claim is made that the proposed predicates have been validated on real operat
 
 ## Worked examples and counterexamples (all invented)
 
-These are manually worked design examples, not executed runtime-layer tests. In every paired
-example the exact scored JSON bytes, including reason, evidence and key order, remain fixed.
-Only the proposed `gaps` annotation varies. Sources `OPS-*` and `SYN-*` below are invented.
+These invented examples illustrate the table. In every paired example, the scored JSON
+bytes stay fixed while the `gaps` annotation varies. Sources `OPS-*` and `SYN-*` below are invented.
 
 **`payment_availability_boundary`: same REVIEW, different follow-up.** Invented customer
 Aster Vale and hit Aster Vale share a name but have no decisive DOB. Identity is REVIEW under
@@ -364,7 +316,7 @@ appears: T00 becomes primary `UNKNOWN_CASE`, retaining T03/T04. A complete, vali
 and resolved context are the evidence needed to change it. The cost of defaulting to T07 is
 closing over a novel concern. No ownership percentage or listing category alone resolves it.
 
-## Acceptance gates and remaining approval
+## Research snapshot and runtime validation
 
 Completed for this docs/tool scope: the system tests, invented tool tests, repeated aggregate
 counts, fresh scored run equal to committed bytes, private validator and viewer sample check.
@@ -372,24 +324,8 @@ The private validator reports no output problems, all practice decisions correct
 clearances. The aggregate snapshot above records the actual measured counts. Only new
 research/tool files and context guidance are changed; no runtime layer has been tested or built.
 
-If approved later, the owner should require these **additional uncompleted runtime gates**:
-
-- An invented test for each register entry, including malformed dates, recency ties and no
-  customer record; one test for every table row and all precedence overlaps above.
-- Execute every paired worked example. Compare full scored output bytes across operating
-  profiles, against the unchanged baseline, and with the annotation disabled. Compare each
-  candidate as well as the combined hit; count-only equality is insufficient.
-- Repeat each fixed input/context snapshot five times; compare scored and canonical explain
-  bytes. Shuffle input/context ordering, vary environment settings and test missing/invalid
-  context. Explicitly prove no network/model calls and no scored mutation on annotation failure.
-- Use the actual instant-payment legal scope supplied by an authorised specialist; test that
-  unknown jurisdiction never invents a transaction-screening procedure. Verify an unavailable
-  independent reviewer cannot satisfy a completed-review predicate.
-- Run the full release checks in [handoff §5](../../tasks/handoff-chatgpt.md), including stress,
-  loop and strict repro, after any separately authorised runtime change. None of those runtime
-  integration checks is claimed complete by this documentation task.
-
-Justin must approve runtime ownership and the operational contract first. The legal scope,
-actual product/rail controls, context sources, review authority and remaining workflow semantics
-are open questions. This PR preserves identity across all proposed operating profiles; it
-contains neither `enforce` behavior nor a bank/fintech decision shortcut.
+The runtime suite covers payment urgency, label invariance, overlapping matches, ownership
+and premise concerns, unavailable reviewers, invalid or stale context, unresolved customer
+selection, and annotation failure. The paired pipeline test compares scored bytes across
+operating settings. These are synthetic checks. Operational adoption still requires validated
+context sources, applicable legal scope and workflow ownership.

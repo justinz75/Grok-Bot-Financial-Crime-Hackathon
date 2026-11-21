@@ -143,5 +143,6 @@ sentence that says what changed, like the ones already in `git log`.
 missing original G01–G18 file described in the handoff. Its R IDs have no verified G mapping.
 `tools/gap_counts.py` emits aggregate research indicators only; counts are neither errors nor
 proposed decision changes. Operational disposition is separate from scored identity.
-No gaps runtime layer or bank/fintech profile is implemented or approved by this work; Justin's
-explicit go-ahead is required before runtime work. Keep participant records private.
+The explain-only policy-gap table uses sourced operating context, as documented in
+[the explain format](docs/explain-format.md#policy-gap-follow-up). Keep participant records
+and operational snapshots private.

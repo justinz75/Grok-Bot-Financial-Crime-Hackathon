@@ -289,11 +289,7 @@ were not recovered in the assigned Linux checkout or advertised remote refs.
 or inherited counts. Its aggregate counting tool is research-only and explicitly disables
 optional layers. Unmeasurable operational questions remain unknown.
 
-This documents the assigned docs/tool scope, not a new owner-approved runtime decision.
-Identity remains the scored answer; operational disposition requires separate context.
-The deterministic operational table is a new proposal, not a recovered design or legal procedure.
-It addresses the additional requirements in [the direction note](../../tasks/policy-gap-direction.md),
-including explicit exposures, auditable assumptions and synthetic counterexamples. All proposed
-operating profiles preserve the scored identity bytes.
-Justin's go-ahead is required for any runtime layer, explain/viewer integration or profile
-behavior. No bank/fintech difference in sanctions duties is assumed.
+The runtime annotates operational follow-up in the explain file after the scored
+identity decision is final. The table uses sourced operating facts and reports missing or
+invalid context. Bank and fintech labels have no effect on its predicates. Follow-up actions
+are advisory. See the [context format](../explain-format.md#policy-gap-follow-up).

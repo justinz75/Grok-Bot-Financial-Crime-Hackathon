@@ -14,6 +14,7 @@ import time
 from . import countries as C
 from . import dates as D
 from . import layers
+from .layers import gaps
 from .decide import AMBIGUOUS, DIFFERENT, REVIEW, Outcome, combine, decide, states
 from .resolve import Resolver
 from .store import Store, find_folder, read_jsonl, text
@@ -59,10 +60,11 @@ def _hit_view(hit):
 
 
 class Run(object):
-    def __init__(self, folder, modes=None):
+    def __init__(self, folder, modes=None, gap_context=None):
         self.store = Store(folder)
         self.modes = dict(modes) if modes else layers.config()
         self.problems = []
+        self.gap_context, self.gap_context_error = gap_context or (None, None)
         self.resolver = Resolver(self.store, layers.load_reader(self.store, self.modes, self.problems))
         self.enforcing = any(self.modes.get(name) == "enforce" for name in layers.ORDER)
         self._layers = None
@@ -205,11 +207,24 @@ class Run(object):
         }
         if not explain:
             return line, None
+        gap_evidence = []
+        try:
+            if alert is not None:
+                for entry, customer in zip(entries, pictures):
+                    entry["gaps"] = gaps.candidate_evidence(
+                        self.store, row, customer, hit, count, line["alert_id"])
+                    gap_evidence.extend(entry["gaps"])
+            problem = self.gap_context_error or ("the hit has no alert" if alert is None else None)
+            identity = {"hit_id": hit_id, "decision": line["decision"]}
+            disposition = gaps.annotate(identity, gap_evidence, self.gap_context, problem)
+        except Exception as error:
+            disposition = gaps.unavailable("annotation failed: " + type(error).__name__)
         return line, {
             "hit_id": line["hit_id"], "alert_id": line["alert_id"], "decision": line["decision"],
             "reason_code": line["reason_code"], "customer_record_id": line["customer_record_id"],
             "rules": {"decision": rules_outcome.decision, "reason_code": rules_outcome.code},
             "changed_by": change, "layers": dict(self.modes), "people": entries,
+            "gaps": disposition,
         }
 
     def decide_hit(self, row):
@@ -226,6 +241,12 @@ def _unprocessed(row, error):
     }
 
 
+def _unprocessed_note(line):
+    return dict(line, rules={"decision": line["decision"], "reason_code": line["reason_code"]},
+                changed_by=None, layers={}, people=[],
+                gaps=gaps.unavailable("identity processing did not complete"))
+
+
 def _write(path, rows):
     parent = os.path.dirname(os.path.abspath(path))
     if not os.path.isdir(parent):
@@ -235,12 +256,14 @@ def _write(path, rows):
             handle.write(json.dumps(row, ensure_ascii=False) + "\n")
 
 
-def run(folder, output, explain=None, modes=None):
+def run(folder, output, explain=None, modes=None, gap_context_path=None):
     """Write the scored file, and the explain file when a path for it is given."""
     started = time.time()
     lines, notes, problems = [], [], []
     try:
-        job = Run(folder, modes)
+        path = gap_context_path if gap_context_path is not None else os.environ.get("SCREENING_GAP_CONTEXT")
+        context = gaps.load_context(path) if explain else None
+        job = Run(folder, modes, context)
         hits = job.store.hits
     except Exception as error:  # the folder could not be loaded: every hit still gets a line
         job, hits = None, read_jsonl(os.path.join(find_folder(folder), "hits.jsonl"))
@@ -258,10 +281,11 @@ def run(folder, output, explain=None, modes=None):
             line, note = _unprocessed(row, error), None
         lines.append(line)
         if explain:
-            notes.append(note or dict(line, rules={"decision": line["decision"], "reason_code": line["reason_code"]},
-                                      changed_by=None, layers={}, people=[]))
+            notes.append(note or _unprocessed_note(line))
     _write(output, lines)
     if explain:
+        if job is None:
+            notes = [_unprocessed_note(line) for line in lines]
         for note in notes:
             note.pop("reason", None)
             note.pop("evidence", None)

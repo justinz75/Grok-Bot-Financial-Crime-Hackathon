@@ -129,7 +129,17 @@ def build():
         with io.open(os.path.join(folder, "name_variants.json"), "w", encoding="utf-8", newline="\n") as handle:
             json.dump(VARIANTS, handle)
         scored, explain = os.path.join(folder, "out.jsonl"), os.path.join(folder, "out.explain.jsonl")
-        pipeline.run(folder, scored, explain, MODES)
+        # A fictional live payment makes the missing-DOB hit urgent for the demo.
+        missing_dob = next(hit["hit_id"] for hit in data.tables["hits"] if hit["name"] == "Anna Petrova")
+        context_path = os.path.join(folder, "sample_context.json")
+        payment = {field: {"status": "verified", "value": value, "source_ref": "DEMO-OPS-1",
+                           "valid_from": "2026-11-06", "valid_until": "2026-11-06"}
+                   for field, value in {"product_custody": "payment", "availability": "imminent",
+                                        "effective_gate": False, "recall_available": False}.items()}
+        with io.open(context_path, "w", encoding="utf-8") as handle:
+            json.dump({"profile_id": "invented-payment", "version": "1", "as_of": "2026-11-06",
+                       "cases": {missing_dob: payment}}, handle)
+        pipeline.run(folder, scored, explain, MODES, gap_context_path=context_path)
         return read(scored), read(explain)
     finally:
         shutil.rmtree(folder, ignore_errors=True)
