@@ -74,7 +74,7 @@ python ROOM/validate.py --data DATA --output output/dev.jsonl --score DATA/pract
 python tools/stress.py DATA                                      # damaged-text stress test
 ```
 
-Expected today: 37 tests pass; 819 hits; 0 problems; 50 of 50 practice labels right; 0 unsafe
+Expected today: 168 tests pass; 819 hits; 0 problems; 50 of 50 practice labels right; 0 unsafe
 clearances; stress test reports no new clearances.
 
 ## Report format
