@@ -165,6 +165,70 @@ def profile_birth(profile_notes, opening_line_only=False):
 
 
 # -- web search results ----------------------------------------------------------
+def clearance_birth(text, name):
+    """Read only a birth date or age attached to the listed subject.
+
+    The broader readers remain useful for stopping clearances. This reader is an
+    additional veto, never a source of new clearing facts. Bare snippet numbers,
+    remote dates after birth words, and facts about relatives are not evidence
+    that the listed subject has a contradictory date of birth.
+    """
+    words = re.findall(r"[^\W\d_]+", fold(name or ""))
+
+    def subject(prefix):
+        descriptor = re.sub(r"\s+(?:was|is)\s*$", "", prefix.strip(), flags=re.I).rstrip(" ,")
+        phrases = "|".join(re.escape(p) for p in LISTING_PHRASES.values())
+        if re.fullmatch(r"(?:a|an|the) (?:%s)(?: (?:in|from|located in) [\w ]+)?" % phrases,
+                        descriptor, re.I):
+            return True
+        tokens = re.findall(r"[^\W\d_]+", fold(prefix))
+        while tokens and tokens[-1] in {"was", "is", "has", "had", "a", "an", "reached", "the"}:
+            tokens.pop()
+        if tokens and tokens[-1] in {"he", "she", "subject", "his", "her"}:
+            return True
+        return bool(words) and len(tokens) >= len(words) and sorted(tokens[-len(words):]) == sorted(words)
+
+    # A second subject in a sentence makes attachment uncertain. Fail closed.
+    other = re.compile(r"\b(?:wife|husband|spouse|son|daughter|child|mother|father|brother|sister|"
+                       r"partner|associate|colleague|employee|victim|witness|company|business|"
+                       r"fine|counts?|percent|prison|sentence|account|passport|document)\b", re.I)
+    for sentence in re.split(r"(?<=[.!?;])\s+", text or ""):
+        if other.search(sentence):
+            continue
+        for cue in _BORN.finditer(sentence):
+            prefix = sentence[:cue.start()].strip()
+            if prefix and not subject(prefix):
+                continue
+            tail = sentence[cue.end():]
+            tail = re.sub(r"^\s*[.:=–-]?\s*(?:(?:is|was|of|on|in)\b\s+)*", "", tail, flags=re.I)
+            dates = D.find_dates(tail, bare_years=True)
+            if not dates or dates[0][1] != 0:
+                place = _BIRTHPLACE.match(sentence[cue.end():])
+                if place:
+                    tail = sentence[cue.end() + place.end():]
+                    dates = D.find_dates(tail, bare_years=True)
+            if dates and dates[0][1] == 0:
+                return [dates[0][0]], "explicit"
+
+        masked = _mask(sentence, [(s, e) for _, s, e in D.find_dates(sentence, bare_years=True)])
+        for pattern in _AGE_PATTERNS:
+            for match in pattern.finditer(masked):
+                prefix = masked[:match.start()].rstrip(" ,(-")
+                # 'he was 24' includes the subject's verb in the age pattern.
+                attached = subject(prefix)
+                if not attached and "old" in match.group().lower():
+                    suffix = masked[match.end():].lstrip(" ,)-")
+                    tokens = re.findall(r"[^\W\d_]+", fold(suffix))
+                    attached = bool(words) and sorted(tokens[:len(words)]) == sorted(words)
+                if not attached:
+                    continue
+                age = int(match.group(1))
+                dates = D.find_dates(sentence, bare_years=True)
+                if MIN_LISTED_AGE <= age <= MAX_LISTED_AGE and len({d.year for d, _, _ in dates}) == 1:
+                    return D.birth_years_from_age(age, dates[0][0]), "age"
+    return [], None
+
+
 def search_keys(name):
     """Keys a name's search results may be filed under: its lowercase words in
     alphabetical order (accents dropped, initials left out)."""

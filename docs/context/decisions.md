@@ -83,6 +83,27 @@ all five. The two widenings above stop that. The five cases have not been run on
 development set yet. Neither widening can create a clearance: each only takes away the power
 to clear.
 
+### DOB-context hardening in handoff section 3.2
+
+The clearance comparison now requires a birth cue next to its date, or an explicit
+age attached to the listed subject. A bare number in a search snippet is not enough.
+Dates and ages attached to relatives, and numbers describing fines, counts or
+durations, cannot establish a DOB contradiction. This is an additional veto on the
+old comparison: it never introduces a new clearing date or drops one alternative
+while retaining another as a contradiction.
+
+The broader readings remain available to support a match or block a clearance.
+Their former agreement still blocks a location clearance. An uncertain date that
+could have hidden an agreeing source also blocks a country-only clearance. This
+does not claim general natural-language understanding: unrecognised wording gains
+no power to establish a DOB contradiction.
+
+The invented regressions are in `system/tests/test_dob_context.py`; existing
+decision-evidence tests are retained. This task is first in the runtime integration
+order, before the overlapping unreadable-value work. The original `d9b5f72` was
+unavailable in fetched branches and PR refs, so this is a reconstruction on the
+handoff baseline, not a recovered cherry-pick.
+
 ## 4. Evidence lists only what decided the hit
 
 **Decided** 11:44, after reading how the practice labels cite evidence.
