@@ -40,9 +40,10 @@ what they cover. Read the source before quoting one to a judge.
 ## What one run shows on the development set
 
 Every figure below was printed by `python tools/assure.py DATA` on the development set, with
-the code of commit `f5f66de`. The scored file it reports has the SHA-256
+the code of commit `f5f66de`. Run again on top of commit `7755807`, it printed the same figures
+line for line. The scored file it reports has the SHA-256
 `c23adcc75543dca9c8534cfe3b613edfa28a0e4921856885596c610dd9e97bc1`, the same hash
-`tools/repro.py` gives for that commit.
+`tools/repro.py` gives for `f5f66de`.
 
 ### 1. Alerts
 
