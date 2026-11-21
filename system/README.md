@@ -186,11 +186,11 @@ whose identity notes print the legal name without capitals:
 
 | Setting | Decisions that differ from the clean run | Practice score | New clearances |
 |---|---|---|---|
-| rules only | 35 of 819 | 97.2 | 0 |
-| reader on (may support, never clear) | 35 of 819 | 97.2 | 0 |
-| reader enforce (counts in full) | 1 of 819 | 100 | 0 |
+| rules only | 36 of 819 | 97.2 | 0 |
+| reader on (may support, never clear) | 36 of 819 | 97.2 | 0 |
+| reader enforce (counts in full) | 2 of 819 | 100 | 0 |
 
-The rules degrade safely: 23 clearances fall back to review and nothing is wrongly cleared. A
+The rules degrade safely: 24 clearances fall back to review and nothing is wrongly cleared. A
 reader that is trusted gets them back. That result is from the stand-in, which reads capitalised
 words; a real model still has to earn it, and `tools/ablate.py --runs 5 --stress` is how.
 
