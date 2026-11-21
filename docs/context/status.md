@@ -3,6 +3,12 @@
 **Snapshot: 15:30 London time, 21 November 2026. The decision code under `system/screening/` last
 changed at commit `93e96a0`, the merge of pull request 5.**
 
+**Release-readiness supplement:** [release-readiness.md](../release-readiness.md) records a fresh
+baseline check of `94b96fc`, the README/demo/form review, exact integration commands and the
+remaining human actions. It is baseline evidence only: final merged-SHA validation, recording,
+publishing and submission remain with the team. The older tables below retain their stated
+snapshot provenance.
+
 This page goes out of date quickly. The live picture is always in git:
 
 ```
