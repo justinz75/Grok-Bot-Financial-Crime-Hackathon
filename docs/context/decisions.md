@@ -97,6 +97,27 @@ all five. The two widenings above stop that. The five cases have not been run on
 development set yet. Neither widening can create a clearance: each only takes away the power
 to clear.
 
+### DOB-context hardening in handoff section 3.2
+
+The clearance comparison now requires a birth cue next to its date, or an explicit
+age attached to the listed subject. A bare number in a search snippet is not enough.
+Dates and ages attached to relatives, and numbers describing fines, counts or
+durations, cannot establish a DOB contradiction. This is an additional veto on the
+old comparison: it never introduces a new clearing date or drops one alternative
+while retaining another as a contradiction.
+
+The broader readings remain available to support a match or block a clearance.
+Their former agreement still blocks a location clearance. An uncertain date that
+could have hidden an agreeing source also blocks a country-only clearance. This
+does not claim general natural-language understanding: unrecognised wording gains
+no power to establish a DOB contradiction.
+
+The invented regressions are in `system/tests/test_dob_context.py`; existing
+decision-evidence tests are retained. This task is first in the runtime integration
+order, before the overlapping unreadable-value work. The original `d9b5f72` was
+unavailable in fetched branches and PR refs, so this is a reconstruction on the
+handoff baseline, not a recovered cherry-pick.
+
 ## 4. Evidence lists only what decided the hit
 
 **Decided** 11:44, after reading how the practice labels cite evidence.
@@ -259,3 +280,20 @@ once is the fastest way to break it.
 | Do more practice labels exist? | The mentors, at office hours (15:00) | Only 50 hits are answered, and only 8 of the 11 reason codes appear among them |
 | Do the model layers help, and are five runs identical? | Teammate C, with an OpenRouter key and `tools/ablate.py --runs 5` | They stay off until this is measured |
 | Should `names.py` keep its built-in fallback list of name variants? | The owner | It is generic spelling knowledge, used only if the variants file is missing, but it started as a copy of a data-room file |
+
+## Policy-gap reconstruction and runtime boundary
+
+The [handoff §3.1](../../tasks/handoff-chatgpt.md) describes uncommitted Windows files that
+were not recovered in the assigned Linux checkout or advertised remote refs.
+[The reconstructed register](policy-gaps.md) uses R IDs, with no invented G01–G18 mapping
+or inherited counts. Its aggregate counting tool is research-only and explicitly disables
+optional layers. Unmeasurable operational questions remain unknown.
+
+This documents the assigned docs/tool scope, not a new owner-approved runtime decision.
+Identity remains the scored answer; operational disposition requires separate context.
+The deterministic operational table is a new proposal, not a recovered design or legal procedure.
+It addresses the additional requirements in [the direction note](../../tasks/policy-gap-direction.md),
+including explicit exposures, auditable assumptions and synthetic counterexamples. All proposed
+operating profiles preserve the scored identity bytes.
+Justin's go-ahead is required for any runtime layer, explain/viewer integration or profile
+behavior. No bank/fintech difference in sanctions duties is assumed.

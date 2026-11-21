@@ -90,6 +90,11 @@ A hit's date of birth is taken from the first place that has one:
    to the hit. Dates recovered by widening the search or reading wrapped text can support a
    match, while a clearance on birth date still requires the original evidence to contradict it.
 
+Birth dates and ages taken from prose can support a clearance only when the wording
+explicitly ties them to the listed person. A date about a relative or a number describing
+a fine, count or duration cannot establish a birth-date contradiction. An uncertain
+reading can also block a country clearance when a search result may give an agreeing date.
+
 A date in the `dobs` field that cannot be read is kept as unknown, not dropped. The dates that
 could be read may still agree with the customer's, but they may not clear the hit, and neither
 may a date from the notes or the search results: the unread date may be the one that agrees.
@@ -231,9 +236,9 @@ this changes a decision; all of it is what an analyst would want to know.
 
 A bank that lets software clear alerts also has to order the open work, have a second person
 check the clearances, test the name matching and record what was run. `tools/assure.py` does
-that from one run and changes no decision. On the development set, 175 of the 440 alerts close
-with nobody opening them, 122 of the 464 clearances are picked for a second reader (73 for a
-risk flag and 49 by a fixed sample), and 187 of the 230 reviews wait for one fact: the listed
+that from one run and changes no decision. In the historical assurance run, 175 of the 440
+development alerts closed without opening them, and 122 of the 464 clearances were picked for a second reader (73 for a
+risk flag and 49 by a fixed sample). In that run, 187 of the 230 reviews waited for one fact: the listed
 person's date of birth. The tables, and what is still missing, are in
 [docs/assurance.md](../docs/assurance.md).
 

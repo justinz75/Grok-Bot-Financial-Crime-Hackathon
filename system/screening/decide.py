@@ -51,7 +51,7 @@ class Hit(object):
     def __init__(self, hit_id, kind, name, aliases=(), dobs=(), dob_origin=None,
                  dob_evidence=(), countries=(), unknown_countries=(),
                  earliest_report=None, death=None, clearance_dobs=None, clearance_dob_evidence=(),
-                 unread_dobs=()):
+                 blocking_dobs=None, dob_context_uncertain=False, unread_dobs=()):
         self.hit_id = hit_id
         self.kind = kind
         self.name = name
@@ -63,6 +63,8 @@ class Hit(object):
         # Dates available before the recovery expansion define the clearance baseline.
         self.clearance_dobs = self.dobs if clearance_dobs is None else list(clearance_dobs)
         self.clearance_dob_evidence = [source for source in clearance_dob_evidence if source]
+        self.blocking_dobs = self.clearance_dobs if blocking_dobs is None else list(blocking_dobs)
+        self.dob_context_uncertain = dob_context_uncertain
         self.countries = set(countries)
         self.unknown_countries = list(unknown_countries)
         self.earliest_report = earliest_report
@@ -190,7 +192,7 @@ def _dob_state(customer, hit):
     clearance_dob = D.compare(customer.dob, hit.clearance_dobs)
     if dob == "mismatch" and (not customer.dob_can_clear or unread_dobs(hit) or clearance_dob != "mismatch"):
         dob = "unknown"
-    return dob, clearance_dob
+    return dob, D.compare(customer.dob, hit.blocking_dobs)
 
 
 def unread_dobs(hit):
@@ -217,6 +219,10 @@ def _location(customer, hit, name, dob, rules):
     where name and date of birth agree, a country difference never cleared, so there is
     nothing to block and the difference stands."""
     location, shared = location_state(customer, hit)
+    if location == "mismatch" and hit.dob_context_uncertain and dob != "agree":
+        # A misleading profile date can have hidden an agreeing search DOB.
+        # Rejecting that date must not expose a country clearance instead.
+        return "unknown", shared
     if location == "mismatch" and not (name == "agree" and dob == "agree"):
         if mentioned_ties(customer, hit):
             return "unknown", shared
@@ -370,7 +376,7 @@ def decide(customer, hit, rules):
                 "so a person has to review it."
                 % (_country_names(customer.countries), _country_names(hit.countries)))
         else:
-            baseline_dates = ", ".join(D.show(date) for date in hit.clearance_dobs)
+            baseline_dates = ", ".join(D.show(date) for date in hit.blocking_dobs)
             baseline_sources = sorted(set(hit.clearance_dob_evidence) - set(hit.dob_evidence))
             if hit.dobs and baseline_sources:
                 sentences.append(

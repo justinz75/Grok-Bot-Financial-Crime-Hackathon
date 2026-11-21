@@ -147,6 +147,22 @@ def countries_as_nationalities(tables):
             note["text"] = pattern.sub(word + " territory", note["text"])
 
 
+def add_unrelated_birth(tables):
+    for hit in tables["hits"]:
+        notes = hit.get("profile_notes") or ""
+        if not X.profile_birth(notes)[0]:
+            hit["profile_notes"] = "The listed person's sister was born in 1951.\n\n" + notes
+    for result in tables["search_results"]:
+        if not X.birth_from_text(result.get("snippet"), loose=True)[0]:
+            result["snippet"] = (result.get("snippet") or "") + " The listed person's sister was born in 1951."
+
+
+def add_unrelated_number(tables):
+    for result in tables["search_results"]:
+        if not X.birth_from_text(result.get("snippet"), loose=True)[0]:
+            result["snippet"] = (result.get("snippet") or "") + " A fine of 61 million was imposed in May 2024."
+
+
 CASES = [
     ("names in Title Case", [reword_name(lambda n: n.title())]),
     ("names in lower case", [reword_name(lambda n: n.lower())]),
@@ -162,6 +178,8 @@ CASES = [
     ("support notes gain a year", [add_to_support_notes("Date of birth on file confirmed; customer since 2019.")]),
     ("support notes read as failed checks", [add_to_support_notes("Could not finish the identity verification by SMS OTP.")]),
     ("countries as nationalities", [countries_as_nationalities]),
+    ("prose gains a relative's birth", [add_unrelated_birth]),
+    ("search gains a fine amount", [add_unrelated_number]),
 ]
 
 

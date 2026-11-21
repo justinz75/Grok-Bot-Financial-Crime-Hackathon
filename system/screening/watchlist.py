@@ -82,8 +82,33 @@ def build_hit(row, store):
             if not dobs and search_dobs:
                 dobs, used, origin = search_dobs, search_sources, "search"
 
+    # Keep the former readings as blockers: discarding an agreeing date must not
+    # expose a country clearance. Only their power to establish a contradiction
+    # is narrowed here.
+    blocking_dobs = dobs if clearance_dobs is None else clearance_dobs
+    context_uncertain = False
+    if kind != COMPANY and origin != "listed" and clearance_dobs:
+        safe = []
+        line = X.first_paragraph(notes).splitlines()[0] if X.first_paragraph(notes) else ""
+        old_profile, _ = X.profile_birth(notes, opening_line_only=True)
+        if old_profile:
+            safe, _ = X.clearance_birth(line, name)
+        else:
+            for source, snippet in first_bucket:
+                if X.result_about_hit(snippet, phrase, countries):
+                    dates, _ = X.clearance_birth(snippet, name)
+                    if dates:
+                        safe.extend(dates)
+        permitted = {D.readings(d) for d in safe}
+        narrowed = [d for d in clearance_dobs if D.readings(d) in permitted]
+        # Removing one of several possible DOBs must not make the remaining ones
+        # easier to contradict: veto the entire clearance comparison instead.
+        if len(narrowed) != len(clearance_dobs):
+            clearance_dobs = []
+            context_uncertain = True
+
     reports = X.dated_reports(notes)
     return Hit(hit_id, kind, name, aliases, dobs, origin, used, countries, unknown,
                reports[0] if reports else None, D.parse_date(row.get("deceased_date")),
-               clearance_dobs, clearance_sources,
+               clearance_dobs, clearance_sources, blocking_dobs, context_uncertain,
                unread_dobs=D.unread_dates(row.get("dobs")))

@@ -1,11 +1,59 @@
 # Where things stand
 
-**Main baseline: 15:30 London time, 21 November 2026, decision code at `93e96a0`.**
+## Combined DOB and unreadable-value safeguards
 
-The reading-gap integration on `task/handoff-reading` is a review branch based on
-`origin/main` at `94b96fc`, integrating `origin/task/reading-gaps` at `b7a2630`. It is not
-on main. It must be refreshed from main and all handoff gates revalidated after the DOB
-branch lands, because the changes overlap in decision, watchlist and briefing code.
+PR #7 integrates Justin's unreadable-value work over `32a40a4`, the merge of
+the DOB-context safeguards in PR #10. Both safeguards are retained when
+deciding whether a birth date or a country difference can clear a hit.
+
+The combined candidate passed 296 system tests and 28 tools tests. The official
+validator accepted all 819 predictions with 50 of 50 correct practice decisions
+and zero unsafe clearances. The totals were 463 `DIFFERENT_ENTITY`, 231
+`REVIEW` and 125 `SAME_ENTITY`. Scored output matched `32a40a4` byte for byte.
+Strict five-run reproducibility passed for scored and explain output, and the
+viewer sample was up to date.
+
+## Section 3.2 baseline: DOB-context hardening
+
+Validated on `task/handoff-loop`, based on `94b96fc`, at 15:58 London on
+21 November 2026. PR #10 merged this change ahead of the unreadable-value work.
+The figures in this section were measured before the two changes were combined.
+
+`d9b5f72` was absent from fetched branches and PR refs, so the change was
+reconstructed. No existing test was deleted. The wider DOB readings can still
+support a match or block clearance; only explicitly attributed dates and ages can
+establish a prose DOB contradiction. Uncertain context also cannot expose a
+country clearance by hiding an agreeing source. This remains a conservative pattern
+reader, not general language understanding.
+
+| Check | Verified result |
+|---|---|
+| System unit suite | Ran 246 tests, `OK` |
+| Development run | 819 hits decided in 7.3s: DIFFERENT_ENTITY 463, REVIEW 231, SAME_ENTITY 125 |
+| Official validator | `819 lines read, 0 problems`; `50 hits, 50 right decisions, 0 unsafe clearances`; `decision score 100.0`; reason code and customer record `100%` |
+| Compared with handoff baseline | `1 of 819 hits changed decision or reason code, 0 moved into DIFFERENT_ENTITY, 1 changed only in reason or evidence` |
+| Stress | `new clearances caused by harder text: none`, including the added relative-DOB and fine-amount cases |
+| Strict reproducibility | Scored and explain files byte-identical across five runs; working `output/dev.jsonl` equals a fresh run; exit 0 |
+| Viewer sample | `the sample is up to date` |
+| Tools unit suite | `Ran 28 tests`, `OK` |
+| Python compatibility | All `system/**/*.py` files parse with Python 3.8 syntax; no actual Python 3.8 interpreter run locally |
+| Scored output SHA-256 | `a46bfc2187f8bd1440b6ad5b825e703a0a6753a39260ecc92519b25201bef61b` |
+
+The loop's six gates printed:
+
+```text
+tests       PASS     Ran 246 tests in 0.322s, OK
+moved       PASS     1 of 819 hits changed decision or reason code, 0 moved into DIFFERENT_ENTITY, 1 changed only in reason or evidence
+labels      PASS     50 hits, 50 right decisions, 0 unsafe clearances
+stress      PASS     new clearances caused by harder text: none
+same twice  PASS     hits whose decision or reason code differs between runs: 0; scored files byte-identical across 5 runs: yes
+public list PASS     18 of 18 demo cases came out as built
+```
+
+## Historical main snapshot
+
+**Snapshot: 15:30 London time, 21 November 2026. The decision code under `system/screening/` last
+changed at commit `93e96a0`, the merge of pull request 5.**
 
 This page goes out of date quickly. The live picture is always in git:
 
@@ -15,6 +63,13 @@ git log --oneline origin/main     # what is on main
 git branch -r                     # which task branches have been pushed
 ```
 
+Tests-only follow-up to handoff section 3.4, based on `main` at `94b96fc`:
+`python -m unittest discover -s system/tests` prints `Ran 245 tests`, `OK` with the
+invented cases in `test_unlabelled_codes.py` and `test_unlabelled_ambiguity.py`.
+They cover type mismatches, death-date boundaries, conflicting candidate decisions and
+unanimous candidates. No decision code or committed predictions change. The historical
+snapshot and measurements below still describe their stated commits.
+
 If you change the state of a task, update this page in the same pull request.
 
 The `task/screening-improvements` draft includes the follow-up fixes from the PR #5 review.
@@ -23,29 +78,6 @@ predictions, with 50 right decisions on the practice labels. Compared with the c
 `main` at `e120f22`, no verdict, reason code or customer record changed. The longest ambiguous
 reason on the draft dropped from 1555 to 941 characters, and all ambiguous reasons fit the
 four-sentence budget.
-
-## Reading-gap review branch
-
-Validation on `task/handoff-reading`, integrating the refs above. These are branch results;
-the following main-baseline tables retain their historical provenance. The public-list
-experiment was not repeated for this integration.
-
-| Command or comparison | Verified result |
-|---|---|
-| `python -m unittest discover -s system/tests` | `Ran 273 tests`, `OK`; no test methods lost from either merge parent |
-| `python system/run DATA output/dev.jsonl` | `819 hits decided in 7.4s: DIFFERENT_ENTITY 464, REVIEW 230, SAME_ENTITY 125` |
-| Full scored records compared with the saved main output | `819 rows; 0 changed records`; regenerated output is byte-identical |
-| `python ROOM/validate.py --data DATA --output output/dev.jsonl --score DATA/practice_labels.jsonl` | `819 lines read, 0 problems`; `50 hits, 50 right decisions, 0 unsafe clearances`; `reason code 100%, customer record 100%` |
-| Practice evidence sets compared with the reference | `50 of 50` equal |
-| `python tools/loop.py DATA --baseline <saved-main-output>` | All six steps `PASS`; `0 of 819 hits changed decision or reason code, 0 moved into DIFFERENT_ENTITY, 0 changed only in reason or evidence`; `18 of 18 demo cases came out as built` |
-| `python tools/stress.py DATA` | `new clearances caused by harder text: none`; every `NEW CLEAR` is `0` |
-| `python tools/repro.py DATA --runs 5 --strict` | Scored and explain files byte-identical across five runs; committed output equals a fresh run; exit `0` |
-| `python tools/make_viewer_sample.py --check` | `the sample is up to date` |
-
-The unreadable-value tests preserve the original DOB clearance baseline and weak-country
-semantics. Candidate summaries retain the reason an unread value prevents clearance and
-still cite the union of all candidates' evidence. This branch requires a main refresh and
-full revalidation after the DOB branch lands.
 
 ## Numbers to expect
 
