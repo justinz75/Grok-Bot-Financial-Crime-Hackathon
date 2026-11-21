@@ -72,7 +72,8 @@ def build_hit(row, store):
         clearance_dobs, _ = X.profile_birth(notes, opening_line_only=True)
         if dobs:
             origin = "notes"
-            used = ["%s#profile_notes" % hit_id]
+            if not clearance_dobs:  # cite the exact field when the wider reading supplied the date
+                used = ["%s#profile_notes" % hit_id]
         if not dobs or not clearance_dobs:
             phrase = X.listing_phrase(row.get("primary_category"), row.get("categories"))
             search_dobs, search_sources, first_bucket = _search_dobs(name, store, phrase, countries)

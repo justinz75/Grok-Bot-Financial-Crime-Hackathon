@@ -190,7 +190,7 @@ def search_birth(results, phrase, hit_countries):
             for d in dates:
                 if d not in found:
                     found.append(d)
-    return sorted(found), used
+    return sorted(found, key=D.show), used
 
 
 # -- identity checks written up as notes -------------------------------------------

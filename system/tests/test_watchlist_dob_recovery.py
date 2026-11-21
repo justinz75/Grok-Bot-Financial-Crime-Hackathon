@@ -61,6 +61,18 @@ class WatchlistDobRecovery(unittest.TestCase):
         self.assertIn(hit + "#profile_notes", line["evidence"])
         self.assertNotIn(lower_priority, line["evidence"])
 
+    def test_one_search_key_can_supply_year_and_full_birth_date(self):
+        hit = self.folder.hit(self.alert, self.name, countries=("Germany",))
+        year = self.folder.search(
+            "mira selwick", "A politically exposed person in Germany, born in 1982.",
+        )
+        full = self.folder.search(
+            "mira selwick", "A politically exposed person in Germany, born on 14 June 1982.",
+        )
+        line = self.folder.run()[hit]
+        self.assertEqual(line["decision"], "SAME_ENTITY", line["reason"])
+        self.assertTrue({year, full}.issubset(line["evidence"]))
+
     def test_report_and_unrelated_dates_do_not_supply_a_profile_dob(self):
         hit = self.folder.hit(self.alert, self.name, countries=("Germany",))
         row = self.folder.tables["hits"][0]
