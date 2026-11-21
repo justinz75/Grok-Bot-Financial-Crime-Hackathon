@@ -152,7 +152,9 @@ Use IDs in these formats when you invent test data, and never reuse a real one.
     so the code compares it when it is there.
 11. **The practice labels cover only 8 of the 11 reason codes.** None is `DECEASED`,
     `ENTITY_TYPE_MISMATCH` or `AMBIGUOUS_CUSTOMER_RECORD`, and one is `TEMPORAL_IMPOSSIBILITY`.
-    Those paths are checked by `system/tests/test_pipeline.py` instead.
+    Those paths are checked with invented records by `system/tests/test_pipeline.py`,
+    `system/tests/test_unlabelled_codes.py` (type and death-date boundaries), and
+    `system/tests/test_unlabelled_ambiguity.py` (conflicting and unanimous candidates).
 12. **Some hits cannot be scored**, because their answer depends on information that is not in
     the files. They still need a line.
 13. **The spreadsheet is for browsing only.** It cuts long text short. The system reads the
