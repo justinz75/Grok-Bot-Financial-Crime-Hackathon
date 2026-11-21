@@ -172,6 +172,24 @@ decision, and it never calls a model.
 **Why.** The scored deliverable has no interface, so the viewer exists for the 2-minute video and
 the live demo. A viewer that changed or re-derived anything would be a second line of reasoning.
 
+**Redesigned** 14:20, by the owner, following `research/ui-ux.md`. Still one static file with no
+libraries and no network requests. What changed:
+
+- It opens on a built-in sample, so a judge who follows a link sees a working page. The sample
+  is 14 invented hits decided by the real system: `tools/make_viewer_sample.py` builds an
+  invented data folder, runs `system/run` on it and writes the two files into the page. A test
+  fails if the page, the files in `viewer/sample/` and the system's output stop agreeing.
+- Each hit is a card in the organisers' own style: the question, the answer with its
+  consequence, and the customer beside the list entry with one outcome per row.
+- The hits that need a person come first, as a queue ordered by the `score` layer's weight of
+  evidence, each with the briefing's line on what would settle it.
+- The look follows the sponsor's product: light, one accent colour, monospace for record IDs.
+
+The page words three things itself, and only these: plain words for each reason code, a mark
+on the comparison rows a reason code rests on, and, for a hit with several possible customers,
+the line saying that working out which one was screened would settle it. Every other sentence
+on a card is the system's own.
+
 ## 12. One owner for the decision logic and for `main`
 
 **Decided** 12:35.

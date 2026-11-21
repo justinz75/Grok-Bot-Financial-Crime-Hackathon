@@ -7,128 +7,214 @@
   <title>Screening review</title>
   <style>
     :root {
-      color-scheme: dark;
-      --background: #0a0a0a;
-      --surface: #141414;
-      --text: #ededed;
-      --muted: #aaa;
-      --line: #333;
-      --accent: #cc5533;
-      --mono: "Geist Mono", ui-monospace, monospace;
-      font-family: Geist, system-ui, sans-serif;
+      color-scheme: light;
+      --page: #f9f9ff;
+      --surface: #ffffff;
+      --ink: #0b0b0b;
+      --ink-2: #4b4c57;
+      --ink-3: #6b6c78;
+      --line: #e6e6ef;
+      --line-2: #cfcfdc;
+      --accent: #5251fa;
+      --accent-wash: #f1f1ff;
+      /* Outcomes. Always shown with a word and a sign, never as colour alone. */
+      --good: #0ca30c;
+      --good-wash: #ecf8ec;
+      --good-line: #bfe5c2;
+      --warn: #fab219;
+      --warn-wash: #fff6df;
+      --warn-line: #f5dc9c;
+      --warn-ink: #7a4b00;
+      --crit: #d03b3b;
+      --crit-wash: #fdeeee;
+      --crit-line: #f3c3c3;
+      --crit-ink: #9c2020;
+      /* Which way a fact points: towards the same person, or towards a different one. */
+      --toward-same: #e34948;
+      --toward-different: #2a78d6;
+      --track: #f0efec;
+      --mono: "DM Mono", ui-monospace, "SF Mono", "Cascadia Mono", Consolas, monospace;
+      font-family: "DM Sans", system-ui, -apple-system, "Segoe UI", Roboto, sans-serif;
     }
 
     * { box-sizing: border-box; }
     [hidden] { display: none !important; }
-    body { margin: 0; background: var(--background); color: var(--text); }
-    main { width: min(100% - 3rem, 72rem); margin: 3rem auto; }
-    h1 { margin: 0 0 1.75rem; font-size: clamp(1.85rem, 4vw, 2.75rem); letter-spacing: -.04em; }
-    h2 { margin: 0 0 1rem; font-size: 1.125rem; }
-    section { margin-bottom: 2rem; }
-    .files, .counts { display: grid; gap: 1px; margin: 0; background: var(--line); border: 1px solid var(--line); }
-    .files { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-    .counts { grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 2px solid var(--accent); }
-    .file, .count { min-width: 0; padding: 1.25rem; background: var(--surface); }
-    label { display: block; margin-bottom: .75rem; font-weight: 600; }
-    label span, dt { color: var(--muted); font-size: .875rem; }
-    label span { margin-left: .35rem; font-weight: 400; }
-    input { width: 100%; font: inherit; font-size: .875rem; }
-    input::file-selector-button {
-      margin-right: .65rem;
-      padding: .45rem .7rem;
-      border: 1px solid #555;
-      border-radius: 0;
-      background: #222;
-      color: var(--text);
-      cursor: pointer;
-    }
-    input::file-selector-button:hover { border-color: var(--accent); }
-    :focus-visible { outline: 2px solid #ef8c70; outline-offset: 3px; }
-    .status { margin: .65rem 0 0; color: var(--muted); font-size: .875rem; overflow-wrap: anywhere; }
-    .status:empty { margin: 0; }
-    .status[data-error] { color: #ff9a83; }
-    .status[data-warning] { color: #f2c675; }
-    dd { margin: .4rem 0 0; font: 600 2rem/1 var(--mono); }
-    .filters { display: grid; grid-template-columns: 1fr 1.25fr 1.5fr; gap: .75rem; }
-    .filters label { margin-bottom: .4rem; font-size: .875rem; }
-    .filters input, select, button {
-      font: inherit;
-      color: var(--text);
-      background: var(--surface);
-      border: 1px solid var(--line);
-      border-radius: 0;
-    }
-    .filters input, select { width: 100%; min-height: 2.6rem; padding: .5rem .65rem; }
-    .results { margin: 1rem 0; color: var(--muted); font-size: .875rem; }
-    .alerts { display: grid; gap: .75rem; }
-    .alert { border: 1px solid var(--line); background: var(--surface); }
-    .alert > summary { padding: .9rem 1rem; cursor: pointer; }
-    .alert > summary:hover { background: #1d1d1d; }
-    .alert > summary::marker { color: #ef8c70; }
-    code, .bits { font-family: var(--mono); overflow-wrap: anywhere; }
-    .bits { white-space: nowrap; }
-    .alert > summary code { margin-left: .35rem; font-weight: 700; }
-    .alert-meta { float: right; display: inline-flex; align-items: center; gap: .7rem; color: var(--muted); font-size: .875rem; }
-    .tag { display: inline-block; padding: .18rem .48rem; border: 1px solid currentColor; border-radius: 1rem; font-size: .8rem; font-weight: 600; line-height: 1.3; }
-    .positive, .DIFFERENT_ENTITY, .agree { color: #9bd3aa; }
-    .negative, .SAME_ENTITY, .mismatch { color: #ffa59a; }
-    .attention, .REVIEW { color: #f2c675; }
-    .unknown { color: var(--muted); }
-    .hit { padding: 1rem; border-top: 1px solid var(--line); background: #101010; overflow-wrap: anywhere; }
-    .hit h3 { margin: 0 0 .6rem; font-size: 1rem; }
-    .verdict { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem .75rem; }
-    .reason { margin: .8rem 0; line-height: 1.55; }
-    .reason span { display: block; }
-    .customer { margin: 0; color: var(--muted); font-size: .875rem; }
-    .evidence { display: flex; flex-wrap: wrap; gap: .35rem; margin: .65rem 0 0; padding: 0; list-style: none; }
-    .evidence li { padding: .18rem .4rem; border: 1px solid var(--line); background: var(--surface); font-size: .8rem; }
-    .explain { margin-top: 1rem; border: 1px solid var(--line); background: var(--surface); }
-    .explain > summary { padding: .7rem .85rem; cursor: pointer; font-weight: 600; }
-    .explain > summary::marker { color: #ef8c70; }
-    .explain-body { padding: 0 .85rem .85rem; }
-    .comparison { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: .9rem; }
-    .comparison th, .comparison td { padding: .55rem .35rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
-    .comparison thead th:first-child { width: 25%; }
-    .comparison th .tag { display: table; margin-top: .25rem; }
-    .person-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0 0 .75rem; }
-    .person-tabs button { padding: .45rem .65rem; cursor: pointer; }
-    .person-tabs button[aria-selected="true"] { color: #ffb096; border-color: var(--accent); }
-    .explain-section { margin: 1rem 0 0; }
-    .explain-section h4 { margin: 0 0 .45rem; font-size: 1rem; }
-    .explain-section h5 { margin: .7rem 0 .25rem; font-size: .875rem; }
-    .explain-section p { margin: .35rem 0; }
-    .explain-section ul { margin: .25rem 0; padding-left: 1.2rem; }
-    .explain-section li + li { margin-top: .2rem; }
-    .contribution { display: grid; grid-template-columns: minmax(6rem, .8fr) minmax(6rem, 1fr) 5.5rem minmax(8rem, 1.7fr); gap: .55rem; align-items: center; padding: .35rem 0; font-size: .875rem; }
-    .bar { display: flex; height: .58rem; background: #252525; }
-    .half { display: flex; width: 50%; }
-    .half:first-child { justify-content: flex-end; border-right: 1px solid #959595; }
-    .fill { background: #89c99d; }
-    .half:first-child .fill { background: #e28171; }
-    .notice { margin: 0 0 .75rem; padding: .55rem .7rem; border-left: 2px solid var(--accent); background: #282017; color: #f2c675; }
-    .explain-section .notice { margin-top: .65rem; }
-    .hit > .notice { margin: 1rem 0 0; }
+    html { -webkit-text-size-adjust: 100%; }
+    body { margin: 0; background: var(--page); color: var(--ink); font-size: 15px; line-height: 1.5; }
+    main { width: min(100% - 2.5rem, 76rem); margin: 2.25rem auto 4rem; }
+    h1 { margin: .2rem 0 .5rem; font-size: clamp(1.9rem, 4vw, 2.6rem); font-weight: 500; letter-spacing: -.03em; line-height: 1.1; }
+    h2 { margin: 0 0 .75rem; font-size: 1rem; font-weight: 600; }
+    section { margin-top: 1.5rem; }
+    .eyebrow { margin: 0; color: var(--accent); font-size: .78rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+    .lede { margin: 0; max-width: 48rem; color: var(--ink-2); }
+    .panel { padding: 1.1rem 1.25rem; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); }
+    code { font-family: var(--mono); font-size: .88em; }
+    .chip { display: inline-block; padding: .05rem .4rem; border: 1px solid var(--line); border-radius: 6px; background: #fafafd; color: var(--ink-2); font-family: var(--mono); font-size: .76rem; font-weight: 400; line-height: 1.5; white-space: nowrap; }
+    button, select, input[type="search"] { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line-2); border-radius: 8px; }
+    button { padding: .5rem .85rem; cursor: pointer; font-weight: 500; }
+    button:hover { border-color: var(--accent); }
+    button:disabled { border-color: var(--line); color: var(--ink-3); cursor: default; }
+    :focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
 
-    @media (max-width: 42rem) {
-      main { width: calc(100% - 2rem); margin-top: 2rem; }
-      .counts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
-      .filters > :last-child { grid-column: 1 / -1; }
-      .contribution { grid-template-columns: minmax(5rem, 1fr) minmax(4rem, 1fr) 5.5rem; }
-      .contribution > :last-child { grid-column: 1 / -1; color: var(--muted); }
-    }
-    @media (max-width: 32rem) {
-      .files { grid-template-columns: 1fr; }
+    .file-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 1rem 1.5rem; }
+    .file label { display: block; margin-bottom: .4rem; font-size: .9rem; font-weight: 600; }
+    .file label span { margin-left: .35rem; color: var(--ink-3); font-weight: 400; }
+    .file input[type="file"] { width: 100%; font: inherit; font-size: .85rem; color: var(--ink-2); }
+    input::file-selector-button { margin-right: .65rem; padding: .4rem .7rem; border: 1px solid var(--line-2); border-radius: 8px; background: var(--surface); color: var(--ink); font: inherit; cursor: pointer; }
+    input::file-selector-button:hover { border-color: var(--accent); }
+    .status { margin: .45rem 0 0; color: var(--ink-3); font-size: .85rem; overflow-wrap: anywhere; }
+    .status:empty { margin: 0; }
+    .status[data-error] { color: var(--crit-ink); }
+    .status[data-warning] { color: var(--warn-ink); }
+    .banner { margin: 1rem 0 0; padding: .6rem .8rem; border-radius: 8px; background: var(--accent-wash); font-size: .9rem; }
+    .empty { margin: 1.5rem 0 0; color: var(--ink-2); }
+
+    .headline { margin: 0 0 .9rem; font-size: 1.35rem; font-weight: 500; letter-spacing: -.01em; line-height: 1.3; }
+    .split { display: flex; gap: 2px; height: 14px; margin-bottom: .9rem; }
+    .seg { min-width: 4px; border-radius: 3px; }
+    .seg.good { background: var(--good); }
+    .seg.warn { background: var(--warn); }
+    .seg.crit { background: var(--crit); }
+    .tiles { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem; }
+    .tile { display: block; width: 100%; padding: .8rem .9rem; border: 1px solid var(--line); border-radius: 10px; text-align: left; }
+    .tile .label { display: flex; align-items: center; gap: .4rem; color: var(--ink-2); font-size: .85rem; }
+    .tile .value { display: block; margin-top: .25rem; font-size: 1.9rem; font-weight: 500; letter-spacing: -.02em; line-height: 1.1; font-variant-numeric: tabular-nums; }
+    .tile .share { color: var(--ink-3); font-size: .85rem; font-weight: 400; }
+    .facts { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: .75rem 1.25rem; margin: 1rem 0 0; padding-top: .9rem; border-top: 1px solid var(--line); }
+    .facts dt { color: var(--ink-3); font-size: .78rem; }
+    .facts dd { margin: .1rem 0 0; font-size: .9rem; }
+
+    .badge { display: inline-grid; place-items: center; flex: none; width: 1.2em; height: 1.2em; border-radius: 50%; color: #fff; font-size: .8em; font-weight: 700; line-height: 1; }
+    .badge.good { background: var(--good); }
+    .badge.warn { background: var(--warn); color: #0b0b0b; }
+    .badge.crit { background: var(--crit); }
+    .badge.same { background: var(--toward-same); }
+    .badge.diff { background: var(--toward-different); }
+    .badge.none { background: #d5d6de; color: #0b0b0b; }
+    .pill { display: inline-flex; align-items: center; gap: .4rem; padding: .28rem .7rem .28rem .45rem; border: 1px solid transparent; border-radius: 999px; font-size: .88rem; font-weight: 600; white-space: nowrap; }
+    .pill.good { background: var(--good-wash); border-color: var(--good-line); }
+    .pill.warn { background: var(--warn-wash); border-color: var(--warn-line); }
+    .pill.crit { background: var(--crit-wash); border-color: var(--crit-line); }
+    .pill.small { padding: .1rem .5rem .1rem .3rem; font-size: .78rem; }
+    .state { display: inline-flex; align-items: center; gap: .35rem; font-size: .84rem; font-weight: 600; white-space: nowrap; }
+
+    .toolbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: .75rem 1rem; margin-bottom: .9rem; }
+    .views { display: inline-flex; gap: 3px; padding: 3px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); }
+    .views button { padding: .45rem .9rem; border: 0; border-radius: 7px; background: transparent; color: var(--ink-2); }
+    .views button[aria-pressed="true"] { background: var(--ink); color: #fff; }
+    .views .n { margin-left: .35rem; opacity: .75; font-variant-numeric: tabular-nums; }
+    .hint { margin: 0; color: var(--ink-3); font-size: .82rem; }
+    kbd { padding: 0 .3rem; border: 1px solid var(--line-2); border-radius: 4px; background: var(--surface); font-family: var(--mono); font-size: .9em; }
+    .sorter { display: flex; align-items: center; gap: .5rem; color: var(--ink-2); font-size: .88rem; }
+    .sorter select { padding: .4rem .6rem; }
+    .intro { margin: 0 0 .9rem; color: var(--ink-2); }
+    .filters { display: grid; grid-template-columns: 1fr 1.25fr 1.5fr; gap: .75rem; margin-bottom: .75rem; }
+    .filters label { display: block; margin-bottom: .3rem; color: var(--ink-2); font-size: .82rem; font-weight: 600; }
+    .filters input, .filters select { width: 100%; min-height: 2.5rem; padding: .45rem .65rem; }
+    .results { margin: 0 0 .75rem; color: var(--ink-3); font-size: .88rem; }
+
+    .rows { display: grid; gap: .6rem; }
+    .row, .alert { border: 1px solid var(--line); border-radius: 12px; background: var(--surface); overflow: hidden; }
+    .row > summary, .alert > summary { list-style: none; cursor: pointer; }
+    summary::-webkit-details-marker { display: none; }
+    .row > summary:hover, .alert > summary:hover { background: #fafaff; }
+    .row > summary { display: grid; grid-template-columns: 2rem minmax(0, 1.5fr) minmax(9rem, .8fr) minmax(0, 1.6fr) .8rem; gap: 1rem; align-items: center; padding: .8rem 1rem; }
+    .rank { color: var(--ink-3); font-size: .85rem; font-variant-numeric: tabular-nums; }
+    .who { font-weight: 600; overflow-wrap: anywhere; }
+    .who span { color: var(--ink-3); font-weight: 400; }
+    .meta { display: flex; flex-wrap: wrap; align-items: center; gap: .35rem; margin-top: .25rem; color: var(--ink-3); font-size: .82rem; }
+    .weight { color: var(--ink-2); font-size: .82rem; }
+    .weight .num { color: var(--ink); font-family: var(--mono); font-weight: 600; }
+    .weight .bar { margin-bottom: .3rem; }
+    .settle { display: -webkit-box; overflow: hidden; color: var(--ink-2); font-size: .88rem; -webkit-box-orient: vertical; -webkit-line-clamp: 3; }
+    .settle b { color: var(--ink); font-weight: 600; }
+    .caret { width: .55rem; height: .55rem; border-right: 2px solid var(--ink-3); border-bottom: 2px solid var(--ink-3); transform: rotate(-45deg); transition: transform .12s; }
+    details[open] > summary .caret { transform: rotate(45deg); }
+    .alert > summary { display: flex; align-items: center; gap: .75rem; padding: .7rem 1rem; }
+    .alert > summary .grow { display: flex; flex: 1; flex-wrap: wrap; align-items: center; gap: .4rem .75rem; min-width: 0; }
+    .alert > summary code { font-weight: 600; }
+    .alert-count { color: var(--ink-3); font-size: .85rem; }
+
+    .hit { padding: 1.1rem 1.25rem 1.25rem; border-top: 1px solid var(--line); overflow-wrap: anywhere; }
+    .hit-head { display: flex; flex-wrap: wrap; align-items: flex-start; justify-content: space-between; gap: .75rem 1rem; }
+    .question { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: 0; color: var(--ink-3); font-size: .84rem; }
+    .hit h3 { margin: .25rem 0 .2rem; font-size: 1.2rem; font-weight: 600; letter-spacing: -.01em; line-height: 1.3; }
+    .code-line { margin: 0; color: var(--ink-2); font-size: .88rem; }
+    .block { margin-top: 1rem; }
+    .block h4 { margin: 0 0 .35rem; color: var(--ink-3); font-size: .74rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+    .block p { margin: 0; }
+    .block ul { margin: 0; padding-left: 1.1rem; }
+    .block li + li { margin-top: .2rem; }
+    .reason span { display: block; }
+    .chips { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; }
+    .cols { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0 1.5rem; }
+    .firm { margin-top: .3rem !important; color: var(--ink-3); font-size: .86rem; }
+    .settle-box { padding: .6rem .8rem; border: 1px solid var(--warn-line); border-radius: 8px; background: var(--warn-wash); }
+    .notice { margin: .9rem 0 0; padding: .55rem .75rem; border-left: 3px solid var(--warn); border-radius: 0 8px 8px 0; background: var(--warn-wash); font-size: .9rem; }
+    .customer-line { display: flex; flex-wrap: wrap; align-items: center; gap: .4rem; margin: .9rem 0 0; color: var(--ink-2); font-size: .9rem; }
+
+    .compare { width: 100%; margin-top: .6rem; border-collapse: collapse; table-layout: fixed; font-size: .92rem; }
+    .compare .field { width: 15%; }
+    .compare .outcome { width: 19%; }
+    .compare th, .compare td { padding: .6rem .7rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .compare thead th { padding-top: .35rem; padding-bottom: .35rem; color: var(--ink-3); font-size: .74rem; font-weight: 600; letter-spacing: .05em; text-transform: uppercase; }
+    .compare tbody th { color: var(--ink-2); font-weight: 500; }
+    .compare tr.decided > * { background: var(--accent-wash); }
+    .compare tr.decided > th { box-shadow: inset 3px 0 0 var(--accent); }
+    .val { font-weight: 600; }
+    .sub { display: flex; flex-wrap: wrap; align-items: center; gap: .3rem; margin-top: .2rem; color: var(--ink-3); font-size: .82rem; }
+    .verified { margin-left: .4rem; padding: 0 .4rem; border: 1px solid var(--line-2); border-radius: 999px; color: var(--ink-2); font-size: .72rem; font-weight: 600; white-space: nowrap; }
+    .decided-mark { display: block; margin-top: .2rem; color: var(--accent); font-size: .76rem; font-weight: 600; }
+
+    .legend { display: flex; flex-wrap: wrap; gap: .3rem 1rem; margin: 0 0 .4rem !important; color: var(--ink-2); font-size: .8rem; }
+    .swatch { display: inline-block; width: .7rem; height: .7rem; margin-right: .3rem; border-radius: 2px; vertical-align: -1px; }
+    .contribution { display: grid; grid-template-columns: 7rem minmax(6rem, 14rem) 5.4rem minmax(0, 1fr); gap: .6rem; align-items: center; padding: .28rem 0; font-size: .88rem; }
+    .contribution .num { font-family: var(--mono); text-align: right; white-space: nowrap; }
+    .contribution .detail { color: var(--ink-2); }
+    .contribution.total { margin-top: .3rem; padding-top: .5rem; border-top: 1px solid var(--line); font-weight: 600; }
+    .contribution.total .detail { color: var(--ink); }
+    .bar { display: flex; height: 10px; background: var(--track); }
+    .half { display: flex; width: 50%; }
+    .half:first-child { justify-content: flex-end; border-right: 1px solid #8f8f99; }
+    .fill.same { border-radius: 0 4px 4px 0; background: var(--toward-same); }
+    .fill.diff { border-radius: 4px 0 0 4px; background: var(--toward-different); }
+    .note { margin-top: .4rem !important; color: var(--ink-3); font-size: .82rem; }
+
+    .person-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin: .9rem 0 0; }
+    .person-tabs button { padding: .4rem .7rem; font-size: .88rem; }
+    .person-tabs button[aria-selected="true"] { border-color: var(--accent); background: var(--accent-wash); }
+    footer { margin-top: 2.5rem; color: var(--ink-3); font-size: .82rem; }
+
+    @media (max-width: 52rem) {
+      main { width: calc(100% - 1.5rem); margin-top: 1.5rem; }
+      .file-grid, .cols, .filters { grid-template-columns: 1fr; }
+      .tiles, .facts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .row > summary { grid-template-columns: 1.6rem minmax(0, 1fr) .8rem; gap: .5rem .75rem; }
+      .row > summary .weight, .row > summary .settle { grid-column: 2; }
+      .row > summary .caret { grid-row: 1; grid-column: 3; }
+      .contribution { grid-template-columns: 6rem minmax(0, 1fr) 5.4rem; }
+      .contribution .detail { grid-column: 1 / -1; }
+      .compare { font-size: .86rem; }
+      .compare .field { width: 20%; }
+      .compare .outcome { width: 25%; }
+      .compare th, .compare td { padding: .5rem .35rem; }
+      .state { flex-direction: column; align-items: flex-start; gap: .15rem; white-space: normal; overflow-wrap: normal; }
+      .hit { padding: 1rem .8rem; }
     }
   </style>
 </head>
 <body>
   <main>
-    <h1>Screening review</h1>
+    <header>
+      <p class="eyebrow">Sanctions screening · review viewer</p>
+      <h1>Is this the same person?</h1>
+      <p class="lede">Every watchlist hit from one run: the answer, the facts that decided it and the records
+        they came from. The hits that still need a person come first, with the one fact that would settle each.</p>
+    </header>
 
-    <section aria-labelledby="files-heading">
+    <section class="panel" aria-labelledby="files-heading">
       <h2 id="files-heading">Run files</h2>
-      <div class="files">
+      <div class="file-grid">
         <div class="file">
           <label for="scored-file">Scored file <span>Required</span></label>
           <input id="scored-file" type="file" accept=".jsonl,.ndjson,.txt" required aria-describedby="scored-status">
@@ -139,69 +225,142 @@
           <input id="explain-file" type="file" accept=".jsonl,.ndjson,.txt" aria-describedby="explain-status">
           <p id="explain-status" class="status" role="status"></p>
         </div>
+        <div class="file">
+          <label for="load-sample">Built-in sample <span>Invented data</span></label>
+          <button id="load-sample" type="button">Show the sample</button>
+          <p id="sample-status" class="status"></p>
+        </div>
+      </div>
+      <p id="sample-banner" class="banner" hidden></p>
+    </section>
+
+    <p id="empty" class="empty">No run is loaded. Choose a scored file, or show the built-in sample.</p>
+
+    <section id="summary" class="panel" aria-labelledby="summary-heading" hidden>
+      <h2 id="summary-heading">This run</h2>
+      <p id="headline" class="headline"></p>
+      <div id="split" class="split" role="img"></div>
+      <div id="tiles" class="tiles"></div>
+      <dl id="facts" class="facts"></dl>
+    </section>
+
+    <section id="queue" aria-label="Hits" hidden>
+      <div class="toolbar">
+        <div class="views" role="group" aria-label="View">
+          <button id="view-review" type="button" aria-pressed="true">Review queue<span class="n"></span></button>
+          <button id="view-all" type="button" aria-pressed="false">All alerts<span class="n"></span></button>
+        </div>
+        <p class="hint"><kbd>j</kbd> and <kbd>k</kbd> move down and up the list. <kbd>Enter</kbd> opens.</p>
+      </div>
+
+      <div id="review-view">
+        <div class="toolbar">
+          <p id="review-intro" class="intro"></p>
+          <label class="sorter" for="review-sort">Order
+            <select id="review-sort">
+              <option value="same">Most likely the same first</option>
+              <option value="different">Closest to clearing first</option>
+              <option value="id">Hit ID</option>
+            </select>
+          </label>
+        </div>
+        <div id="review-list" class="rows"></div>
+      </div>
+
+      <div id="alerts-view" hidden>
+        <div class="filters">
+          <div>
+            <label for="decision-filter">Decision</label>
+            <select id="decision-filter">
+              <option value="">All decisions</option>
+              <option value="DIFFERENT_ENTITY">Different · cleared</option>
+              <option value="REVIEW">Needs a person</option>
+              <option value="SAME_ENTITY">Same · to compliance</option>
+            </select>
+          </div>
+          <div>
+            <label for="reason-filter">Reason</label>
+            <select id="reason-filter"><option value="">All reasons</option></select>
+          </div>
+          <div>
+            <label for="id-filter">Search</label>
+            <input id="id-filter" type="search" placeholder="An ID, a record or a name" spellcheck="false">
+          </div>
+        </div>
+        <p id="results" class="results" role="status"></p>
+        <div id="alerts" class="rows"></div>
       </div>
     </section>
 
-    <section id="summary" aria-labelledby="summary-heading" hidden>
-      <h2 id="summary-heading">Decision summary</h2>
-      <dl class="counts">
-        <div class="count"><dt>Total hits</dt><dd id="total">0</dd></div>
-        <div class="count"><dt>Different entity</dt><dd id="DIFFERENT_ENTITY">0</dd></div>
-        <div class="count"><dt>Same entity</dt><dd id="SAME_ENTITY">0</dd></div>
-        <div class="count"><dt>Review</dt><dd id="REVIEW">0</dd></div>
-      </dl>
-    </section>
-
-    <section id="queue" aria-labelledby="queue-heading" hidden>
-      <h2 id="queue-heading">Alerts</h2>
-      <div class="filters">
-        <div>
-          <label for="decision-filter">Decision</label>
-          <select id="decision-filter">
-            <option value="">All decisions</option>
-            <option value="DIFFERENT_ENTITY">Different · cleared</option>
-            <option value="SAME_ENTITY">Same · to compliance</option>
-            <option value="REVIEW">Needs a person</option>
-          </select>
-        </div>
-        <div>
-          <label for="reason-filter">Reason code</label>
-          <select id="reason-filter"><option value="">All reason codes</option></select>
-        </div>
-        <div>
-          <label for="id-filter">Alert or hit ID</label>
-          <input id="id-filter" type="search" placeholder="Search IDs" spellcheck="false">
-        </div>
-      </div>
-      <p id="results" class="results" role="status"></p>
-      <div id="alerts" class="alerts"></div>
-    </section>
+    <footer>Display only. The files are read in this browser tab: nothing is uploaded and nothing is changed.</footer>
   </main>
   <script>
-    const decisions = ["DIFFERENT_ENTITY", "SAME_ENTITY", "REVIEW"];
-    const verdicts = {
-      DIFFERENT_ENTITY: "Different · cleared",
-      SAME_ENTITY: "Same · to compliance",
-      REVIEW: "Needs a person"
+    // Left to right in the split bar: cleared, needs a person, same.
+    const decisions = ["DIFFERENT_ENTITY", "REVIEW", "SAME_ENTITY"];
+    const outcomes = {
+      DIFFERENT_ENTITY: { tone: "good", sign: "✓", short: "Different · cleared", full: kind => `Different ${kind} · cleared` },
+      REVIEW: { tone: "warn", sign: "?", short: "Needs a person", full: () => "Needs a person" },
+      SAME_ENTITY: { tone: "crit", sign: "!", short: "Same · to compliance", full: kind => `Same ${kind} · to compliance` }
     };
-    const summary = document.getElementById("summary");
-    const queue = document.getElementById("queue");
-    const alertList = document.getElementById("alerts");
-    const decisionFilter = document.getElementById("decision-filter");
-    const reasonFilter = document.getElementById("reason-filter");
-    const idFilter = document.getElementById("id-filter");
-    const explainStatus = document.getElementById("explain-status");
-    // The largest weight one fact carries. Every bar is drawn against it, so the same length
-    // means the same weight on every card.
-    const BAR_FULL = 14;
+    // Plain words for each reason code. An unknown code is shown as it is.
+    const reasons = {
+      DOB_MISMATCH: "Dates of birth differ",
+      LOCATION_MISMATCH: "No country in common",
+      NAME_MISMATCH_VERIFIED: "The verified name does not match",
+      ENTITY_TYPE_MISMATCH: "A person against a company",
+      TEMPORAL_IMPOSSIBILITY: "The dates make it impossible",
+      DECEASED: "The listed person died before screening",
+      NAME_DOB_MATCH: "Name and date of birth agree",
+      NAME_LOCATION_MATCH: "Name and country agree",
+      NAME_DOB_LOCATION_MATCH: "Name, date of birth and country agree",
+      INSUFFICIENT_DATA: "Not enough to decide",
+      AMBIGUOUS_CUSTOMER_RECORD: "More than one customer fits"
+    };
+    // The rows of the comparison that each reason code rests on.
+    const decidedBy = {
+      DOB_MISMATCH: ["dob"], LOCATION_MISMATCH: ["location"], NAME_MISMATCH_VERIFIED: ["name"],
+      ENTITY_TYPE_MISMATCH: ["type"], TEMPORAL_IMPOSSIBILITY: ["timing"], DECEASED: ["death"],
+      NAME_DOB_MATCH: ["name", "dob"], NAME_LOCATION_MATCH: ["name", "location"],
+      NAME_DOB_LOCATION_MATCH: ["name", "dob", "location"]
+    };
+    const states = {
+      agree: { tone: "same", sign: "=", text: "Agrees" },
+      mismatch: { tone: "diff", sign: "≠", text: "Differs" },
+      unknown: { tone: "none", sign: "–", text: "Can't compare" }
+    };
+    const origins = {
+      listed: "From the listing",
+      notes: "Worked out from the profile notes",
+      search: "From a search result about this listing"
+    };
+    // The widest total a card shows. Every bar is drawn against it, so the same length means
+    // the same weight in every row of every card.
+    const FULL_WEIGHT = 24;
     // How the system starts a sentence in a reason, and short forms that end in a full stop.
     const sentenceOpeners = /^(?:The|Both|Nothing|Every|Each|They|No|Without|This|\d)/;
     const shortForms = new Set(["inc", "ltd", "co", "corp", "st", "dr", "mr", "mrs", "ms", "jr", "sr", "mt", "vs"]);
+
+    const byId = id => document.getElementById(id);
+    const summary = byId("summary");
+    const queue = byId("queue");
+    const alertList = byId("alerts");
+    const reviewList = byId("review-list");
+    const decisionFilter = byId("decision-filter");
+    const reasonFilter = byId("reason-filter");
+    const idFilter = byId("id-filter");
+    const reviewSort = byId("review-sort");
+    const explainStatus = byId("explain-status");
+    const scoredStatus = byId("scored-status");
+
+    let allHits = [];
     let alertGroups = [];
     let explainByAlert = new Map();
     let explainCount = 0;
     // Alerts the reader opened or closed by hand, by alert ID.
     let manualOpen = new Map();
+    let view = "review";
+    // Whether each file on screen is the built-in sample.
+    const sample = { scored: false, explain: false };
 
     function parseJsonl(text, validate) {
       const rows = [];
@@ -221,24 +380,44 @@
       return rows;
     }
 
-    function renderSummary(rows) {
-      const counts = new Map(decisions.map(decision => [decision, 0]));
-      for (const { decision } of rows) {
-        counts.set(decision, counts.get(decision) + 1);
-      }
-      document.getElementById("total").textContent = rows.length;
-      for (const [decision, count] of counts) {
-        document.getElementById(decision).textContent = count;
-      }
-      summary.hidden = false;
-    }
-
     function element(tag, className, text) {
       const node = document.createElement(tag);
       if (className) node.className = className;
       if (text !== undefined) node.textContent = text;
       return node;
     }
+
+    const chip = id => element("code", "chip", id);
+
+    function badge(tone, sign) {
+      const node = element("span", `badge ${tone}`, sign);
+      node.setAttribute("aria-hidden", "true");
+      return node;
+    }
+
+    function pill(decision, text, small) {
+      const { tone, sign, short } = outcomes[decision] ?? { tone: "warn", sign: "?", short: decision };
+      const node = element("span", `pill ${tone}${small ? " small" : ""}`);
+      node.append(badge(tone, sign), text ?? short);
+      return node;
+    }
+
+    function block(title, ...children) {
+      const node = element("div", "block");
+      node.append(element("h4", "", title), ...children);
+      return node;
+    }
+
+    function list(entries) {
+      const node = element("ul");
+      node.append(...entries.map(entry => element("li", "", entry)));
+      return node;
+    }
+
+    const plural = (count, one, many = `${one}s`) => `${count} ${count === 1 ? one : many}`;
+    const share = (count, total) => (total ? `${Math.round(count / total * 100)}%` : "0%");
+    const plainReason = code => reasons[code] ?? code;
+    const signed = bits => `${bits > 0 ? "+" : bits < 0 ? "−" : ""}${Math.abs(bits).toFixed(1)}`;
 
     function compareIds(left, right) {
       return left < right ? -1 : left > right ? 1 : 0;
@@ -265,6 +444,8 @@
       return parts;
     }
 
+    const explanationOf = hit => explainByAlert.get(hit.alert_id)?.get(hit.hit_id);
+
     // An explain row written for another decision means the two files come from different runs.
     function disagrees(row, hit) {
       return (typeof row.decision === "string" && row.decision !== hit.decision) ||
@@ -275,21 +456,17 @@
     function describeExplain() {
       explainStatus.removeAttribute("data-warning");
       if (!explainCount) return "";
-      let text = `${explainCount} ${explainCount === 1 ? "record" : "records"} loaded.`;
-      if (!alertGroups.length) return text;
-      let total = 0;
+      let text = `${sample.explain ? "Built-in sample: " : ""}${plural(explainCount, "record")} loaded.`;
+      if (!allHits.length) return text;
       let matched = 0;
       let differing = 0;
-      for (const group of alertGroups) {
-        for (const hit of group.hits) {
-          total += 1;
-          const row = explainByAlert.get(hit.alert_id)?.get(hit.hit_id);
-          if (!row) continue;
-          matched += 1;
-          if (disagrees(row, hit)) differing += 1;
-        }
+      for (const hit of allHits) {
+        const row = explanationOf(hit);
+        if (!row) continue;
+        matched += 1;
+        if (disagrees(row, hit)) differing += 1;
       }
-      text += ` ${matched} of ${total} scored hits have an explanation.`;
+      text += ` ${matched} of ${allHits.length} scored hits have an explanation.`;
       if (differing) {
         text += ` ${differing} ${differing === 1 ? "was" : "were"} written for a different decision, so this file may come from another run.`;
       } else if (!matched) {
@@ -299,7 +476,25 @@
       return text;
     }
 
+    // "person" or "company" when the explain file says which and both sides are that, otherwise nothing.
+    function kindOf(explanation) {
+      const first = explanation?.people?.[0];
+      const ours = first?.customer?.kind;
+      const theirs = first?.hit?.kind;
+      if (ours && theirs && ours !== theirs) return "";
+      const kind = ours || theirs;
+      return kind === "person" || kind === "company" ? kind : "";
+    }
+
+    // What an alert comes to: a confirmed hit outranks an open one, which outranks a cleared one.
+    function alertOutcome(hits) {
+      if (hits.some(hit => hit.decision === "SAME_ENTITY")) return "SAME_ENTITY";
+      if (hits.some(hit => hit.decision === "REVIEW")) return "REVIEW";
+      return "DIFFERENT_ENTITY";
+    }
+
     function loadScored(rows) {
+      allHits = rows;
       const groups = new Map();
       for (const hit of rows) {
         if (!groups.has(hit.alert_id)) groups.set(hit.alert_id, []);
@@ -308,18 +503,18 @@
       alertGroups = Array.from(groups, ([id, hits]) => ({
         id,
         hits: hits.sort((left, right) => compareIds(left.hit_id, right.hit_id)),
-        closed: hits.every(hit => hit.decision === "DIFFERENT_ENTITY")
+        outcome: alertOutcome(hits)
       })).sort((left, right) => compareIds(left.id, right.id));
 
       decisionFilter.value = "";
       idFilter.value = "";
       manualOpen = new Map();
       const codes = [...new Set(rows.map(hit => hit.reason_code))].sort(compareIds);
-      reasonFilter.replaceChildren(new Option("All reason codes", ""),
-        ...codes.map(code => new Option(code, code)));
-      renderSummary(rows);
+      reasonFilter.replaceChildren(new Option("All reasons", ""),
+        ...codes.map(code => new Option(reasons[code] ? `${reasons[code]} (${code})` : code, code)));
+      view = rows.some(hit => hit.decision === "REVIEW") ? "review" : "all";
       queue.hidden = false;
-      renderAlerts();
+      render();
       if (explainCount) explainStatus.textContent = describeExplain();
     }
 
@@ -330,8 +525,244 @@
         if (!explainByAlert.has(row.alert_id)) explainByAlert.set(row.alert_id, new Map());
         explainByAlert.get(row.alert_id).set(row.hit_id, row);
       }
-      if (!queue.hidden) renderAlerts();
+      if (!queue.hidden) render();
       return describeExplain();
+    }
+
+    function unloadScored() {
+      allHits = [];
+      alertGroups = [];
+      summary.hidden = true;
+      queue.hidden = true;
+      alertList.replaceChildren();
+      reviewList.replaceChildren();
+      showState();
+    }
+
+    // The banner, the sample button and the empty line follow what is loaded.
+    function showState() {
+      const banner = byId("sample-banner");
+      banner.hidden = !sample.scored;
+      if (sample.scored) {
+        banner.textContent = `You are looking at the built-in sample: ${plural(allHits.length, "invented hit")}, ` +
+          "decided by the real system. Choose a scored file to see a run of your own.";
+      }
+      byId("load-sample").disabled = sample.scored && sample.explain;
+      byId("sample-status").textContent = sample.scored && sample.explain ? "On screen now." : "";
+      byId("empty").hidden = !queue.hidden;
+    }
+
+    function render() {
+      renderSummary();
+      const reviewCount = allHits.filter(hit => hit.decision === "REVIEW").length;
+      byId("view-review").querySelector(".n").textContent = reviewCount;
+      byId("view-all").querySelector(".n").textContent = alertGroups.length;
+      byId("view-review").setAttribute("aria-pressed", String(view === "review"));
+      byId("view-all").setAttribute("aria-pressed", String(view === "all"));
+      byId("review-view").hidden = view !== "review";
+      byId("alerts-view").hidden = view !== "all";
+      if (view === "review") renderReview();
+      else renderAlerts();
+      showState();
+    }
+
+    function setView(next, decision) {
+      view = next;
+      if (decision !== undefined) {
+        decisionFilter.value = decision;
+        reasonFilter.value = "";
+        idFilter.value = "";
+      }
+      render();
+    }
+
+    function renderSummary() {
+      const total = allHits.length;
+      const counts = new Map(decisions.map(decision => [decision, 0]));
+      for (const { decision } of allHits) counts.set(decision, counts.get(decision) + 1);
+      const cleared = counts.get("DIFFERENT_ENTITY");
+      const same = counts.get("SAME_ENTITY");
+      const review = counts.get("REVIEW");
+      byId("headline").textContent = `${cleared} of ${plural(total, "hit")} cleared without a person (${share(cleared, total)}). ` +
+        `${same} confirmed and sent to compliance. ${review} ${review === 1 ? "needs" : "need"} a person.`;
+
+      const split = byId("split");
+      const parts = decisions.filter(decision => counts.get(decision));
+      split.replaceChildren(...parts.map(decision => {
+        const count = counts.get(decision);
+        const segment = element("span", `seg ${outcomes[decision].tone}`);
+        segment.style.flex = `${count} 1 0`;
+        segment.title = `${outcomes[decision].short}: ${plural(count, "hit")} (${share(count, total)})`;
+        return segment;
+      }));
+      split.setAttribute("aria-label", parts.map(decision =>
+        `${outcomes[decision].short}: ${counts.get(decision)} (${share(counts.get(decision), total)})`).join(", "));
+
+      const tile = (label, count, decision, onClick) => {
+        const button = element("button", "tile");
+        button.type = "button";
+        const heading = element("span", "label");
+        if (decision) heading.append(badge(outcomes[decision].tone, outcomes[decision].sign));
+        heading.append(label);
+        const value = element("span", "value", String(count));
+        if (decision) value.append(" ", element("span", "share", share(count, total)));
+        button.append(heading, value);
+        button.addEventListener("click", onClick);
+        return button;
+      };
+      byId("tiles").replaceChildren(
+        tile("All hits", total, "", () => setView("all", "")),
+        tile(outcomes.DIFFERENT_ENTITY.short, cleared, "DIFFERENT_ENTITY", () => setView("all", "DIFFERENT_ENTITY")),
+        tile(outcomes.REVIEW.short, review, "REVIEW", () => setView("review")),
+        tile(outcomes.SAME_ENTITY.short, same, "SAME_ENTITY", () => setView("all", "SAME_ENTITY")));
+
+      const of = outcome => alertGroups.filter(group => group.outcome === outcome).length;
+      let explained = 0;
+      let changed = 0;
+      let layers = null;
+      for (const hit of allHits) {
+        const row = explanationOf(hit);
+        if (!row) continue;
+        explained += 1;
+        if (row.changed_by) changed += 1;
+        if (!layers && row.layers && typeof row.layers === "object") layers = row.layers;
+      }
+      const facts = [
+        ["Alerts", `${alertGroups.length}: ${of("DIFFERENT_ENTITY")} closed, ${of("REVIEW")} waiting for a person, ` +
+          `${of("SAME_ENTITY")} with compliance`],
+        ["Explanations", explainCount ? `${explained} of ${plural(total, "hit")}` : "No explain file loaded"]
+      ];
+      if (explained) {
+        facts.push(["Extra layers in this run", layers
+          ? Object.entries(layers).map(([name, mode]) => `${name} ${mode}`).join(" · ") : "Not recorded"]);
+        facts.push(["Changed to review by a layer", plural(changed, "hit")]);
+      }
+      byId("facts").replaceChildren(...facts.map(([term, value]) => {
+        const item = element("div");
+        item.append(element("dt", "", term), element("dd", "", value));
+        return item;
+      }));
+      summary.hidden = false;
+    }
+
+    // Fill a <details> the first time it opens, so a long list costs nothing until it is read.
+    function lazily(details, build) {
+      let built = false;
+      const fill = () => {
+        if (built || !details.open) return;
+        built = true;
+        details.append(...build());
+      };
+      details.addEventListener("toggle", fill);
+      fill();
+    }
+
+    // A two-sided bar: weight towards a different person grows left, towards the same grows right.
+    function weightBar(bits) {
+      const bar = element("span", "bar");
+      bar.setAttribute("aria-hidden", "true");
+      const left = element("span", "half");
+      const right = element("span", "half");
+      if (bits) {
+        const fill = element("span", `fill ${bits < 0 ? "diff" : "same"}`);
+        fill.style.width = `${Math.min(Math.abs(bits), FULL_WEIGHT) / FULL_WEIGHT * 100}%`;
+        (bits < 0 ? left : right).append(fill);
+      }
+      bar.append(left, right);
+      return bar;
+    }
+
+    // What the review queue needs to know about one hit.
+    function queueEntry(hit) {
+      const people = explanationOf(hit)?.people ?? [];
+      const weighed = people.filter(person => Number.isFinite(person.score?.bits));
+      // With several possible customers, the one most likely to be the listed person leads.
+      const lead = weighed.length
+        ? weighed.reduce((best, person) => (person.score.bits > best.score.bits ? person : best))
+        : people[0];
+      return { hit, people, lead, bits: weighed.length ? lead.score.bits : null };
+    }
+
+    // The one line a queued hit shows: what would settle it, or failing that why it is open.
+    function settles(entry) {
+      const { hit, people, lead } = entry;
+      if (hit.reason_code === "AMBIGUOUS_CUSTOMER_RECORD" && people.length > 1) {
+        return ["Would settle it: ", `Working out which of the ${people.length} customers was screened.`];
+      }
+      const briefing = lead?.briefing;
+      if (briefing?.would_settle?.length) return ["Would settle it: ", briefing.would_settle[0]];
+      return ["Open because: ", briefing?.missing?.[0] ?? sentencesOf(hit.reason).pop() ?? ""];
+    }
+
+    function renderReview() {
+      const entries = allHits.filter(hit => hit.decision === "REVIEW").map(queueEntry);
+      const weighed = entries.some(entry => entry.bits !== null);
+      reviewSort.parentElement.hidden = !weighed;
+      const order = weighed ? reviewSort.value : "id";
+      const direction = order === "different" ? 1 : -1;
+      entries.sort((left, right) => {
+        if (order !== "id" && left.bits !== right.bits) {
+          if (left.bits === null) return 1;
+          if (right.bits === null) return -1;
+          return (left.bits - right.bits) * direction;
+        }
+        return compareIds(left.hit.hit_id, right.hit.hit_id);
+      });
+
+      byId("review-intro").textContent = !entries.length
+        ? "No hit in this run needs a person."
+        : weighed
+          ? `${plural(entries.length, "hit")} could be neither cleared nor confirmed. Each shows how the evidence leans and the one fact that would settle it.`
+          : `${plural(entries.length, "hit")} could be neither cleared nor confirmed. Load the explain file to order them by evidence and see what would settle each.`;
+
+      reviewList.replaceChildren(...entries.map((entry, index) => {
+        const { hit, people, lead, bits } = entry;
+        const row = element("details", "row");
+        row.dataset.hitId = hit.hit_id;
+        const heading = element("summary");
+
+        const main = element("div");
+        const who = element("div", "who");
+        if (lead) {
+          const customer = lead.customer.verified_name || lead.customer.names?.[0];
+          who.append(lead.hit.name || "Unnamed entry");
+          if (customer) who.append(element("span", "", " against "), customer);
+        } else {
+          who.append(plainReason(hit.reason_code));
+        }
+        const meta = element("div", "meta");
+        meta.append(chip(hit.hit_id), chip(hit.alert_id));
+        if (lead) meta.append(plainReason(hit.reason_code));
+        if (people.length > 1) meta.append(` · ${people.length} possible customers`);
+        main.append(who, meta);
+
+        const weight = element("div", "weight");
+        if (bits !== null) {
+          const label = element("div");
+          label.append(element("span", "num", signed(bits)), ` ${lead.score.band ?? ""}`);
+          weight.append(weightBar(bits), label);
+          weight.title = `Weight of evidence ${signed(bits)}: ${lead.score.band ?? ""}`;
+        }
+
+        const settle = element("div", "settle");
+        const [label, text] = settles(entry);
+        if (text) settle.append(element("b", "", label), text);
+
+        heading.append(element("span", "rank", String(index + 1)), main, weight, settle, element("span", "caret"));
+        row.append(heading);
+        lazily(row, () => [renderHit(hit)]);
+        return row;
+      }));
+    }
+
+    // Everything a search can match for one hit: its IDs, its records and, with an explain file, its names.
+    function searchText(hit) {
+      const parts = [hit.hit_id, hit.alert_id, hit.customer_record_id ?? "", ...hit.evidence];
+      for (const person of explanationOf(hit)?.people ?? []) {
+        parts.push(person.customer.verified_name ?? "", ...(person.customer.names ?? []),
+          person.hit.name ?? "", ...(person.hit.aliases ?? []), ...(person.record_ids ?? []));
+      }
+      return parts.join("\n").toLowerCase();
     }
 
     function renderAlerts() {
@@ -345,97 +776,99 @@
       let hitCount = 0;
 
       for (const group of alertGroups) {
-        const matchesAlert = group.id.toLowerCase().includes(query);
         const hits = group.hits.filter(hit =>
           (!decision || hit.decision === decision) &&
           (!reasonCode || hit.reason_code === reasonCode) &&
-          (matchesAlert || hit.hit_id.toLowerCase().includes(query)));
+          (!query || searchText(hit).includes(query)));
         if (!hits.length) continue;
         hitCount += hits.length;
 
         const alert = element("details", "alert");
         alert.dataset.alertId = group.id;
         const heading = element("summary");
-        const meta = element("span", "alert-meta");
-        const count = hits.length === group.hits.length ? hits.length : `${hits.length} of ${group.hits.length}`;
-        meta.append(element("span", "", `${count} ${count === 1 ? "hit" : "hits"}`),
-          element("span", `tag ${group.closed ? "positive" : "attention"}`, group.closed ? "Closed" : "Open"));
-        heading.append(element("code", "", group.id), meta);
+        const grow = element("span", "grow");
+        const count = hits.length === group.hits.length ? plural(hits.length, "hit") : `${hits.length} of ${plural(group.hits.length, "hit")}`;
+        grow.append(element("code", "", group.id), element("span", "alert-count", count));
+        const label = { DIFFERENT_ENTITY: "Closed · all cleared", REVIEW: "Needs a person", SAME_ENTITY: "With compliance" }[group.outcome];
+        heading.append(grow, pill(group.outcome, label, true), element("span", "caret"));
         alert.append(heading);
         alert.open = manualOpen.get(group.id) ?? openByDefault;
         heading.addEventListener("click", () => manualOpen.set(group.id, !alert.open));
-        alert.append(...hits.map(renderHit));
+        lazily(alert, () => hits.map(renderHit));
         nodes.push(alert);
       }
 
       alertList.replaceChildren(...nodes);
-      document.getElementById("results").textContent = hitCount
-        ? `${hitCount} ${hitCount === 1 ? "hit" : "hits"} in ${nodes.length} ${nodes.length === 1 ? "alert" : "alerts"}`
+      byId("results").textContent = hitCount
+        ? `${plural(hitCount, "hit")} in ${plural(nodes.length, "alert")}`
         : "No hits match these filters.";
     }
 
     function renderHit(hit) {
+      const explanation = explanationOf(hit);
+      const people = explanation?.people ?? [];
+      const kind = kindOf(explanation);
+      const outcome = outcomes[hit.decision];
       const card = element("article", "hit");
       card.dataset.hitId = hit.hit_id;
-      const heading = element("h3");
-      heading.append(element("code", "", hit.hit_id));
-      const verdict = element("div", "verdict");
-      verdict.append(element("span", `tag ${hit.decision}`, verdicts[hit.decision]),
-        element("code", "", hit.reason_code));
+
+      const head = element("div", "hit-head");
+      const title = element("div");
+      const question = element("p", "question",
+        kind === "company" ? "Is this the same company?" : kind === "person" ? "Is this the same person?" : "Is this the same customer?");
+      question.append(chip(hit.hit_id), chip(hit.alert_id));
+      const briefed = people.length === 1 ? people[0].briefing?.headline : "";
+      const codeLine = element("p", "code-line", briefed ? `${plainReason(hit.reason_code)} · ` : "");
+      codeLine.append(element("code", "", hit.reason_code));
+      title.append(question, element("h3", "", briefed || plainReason(hit.reason_code)), codeLine);
+      head.append(title, pill(hit.decision, kind ? outcome.full(kind) : outcome.short));
+      card.append(head);
+
+      if (explanation?.changed_by) {
+        const { layer, why } = explanation.changed_by;
+        card.append(element("p", "notice", `Changed to review by the ${layer} layer: ${why}`));
+      }
+      if (explanation && disagrees(explanation, hit)) {
+        card.append(element("p", "notice", `This explanation was written for ${explanation.decision}, ` +
+          `${explanation.reason_code}, not for the decision above. The explain file may come from another run.`));
+      }
+      if (explanation) card.append(renderPeople(explanation));
 
       const reason = element("p", "reason");
       for (const sentence of sentencesOf(hit.reason)) reason.append(element("span", "", sentence));
+      card.append(block("The reason in the scored file", reason));
 
-      const customer = element("p", "customer", "Customer record ");
-      customer.append(element(hit.customer_record_id === null ? "span" : "code", "",
-        hit.customer_record_id ?? "none found"));
-      card.append(heading, verdict, reason, customer);
-
-      if (hit.evidence.length) {
-        const evidence = element("ul", "evidence");
-        evidence.setAttribute("aria-label", "Evidence records");
-        for (const record of hit.evidence) {
-          const chip = element("li");
-          chip.append(element("code", "", record));
-          evidence.append(chip);
-        }
-        card.append(evidence);
-      }
-
-      const explanation = explainByAlert.get(hit.alert_id)?.get(hit.hit_id);
-      if (explanation) {
-        if (disagrees(explanation, hit)) {
-          card.append(element("p", "notice", `This explanation was written for ${explanation.decision}, ` +
-            `${explanation.reason_code}, not for the decision above. The explain file may come from another run.`));
-        }
-        card.append(renderExplain(explanation));
-      }
+      const record = element("div", "chips");
+      if (hit.customer_record_id === null) record.append("None found");
+      else if (hit.customer_record_id === "AMBIGUOUS") record.append("More than one fits", chip("AMBIGUOUS"));
+      else record.append(chip(hit.customer_record_id));
+      const cited = element("div", "chips");
+      cited.setAttribute("aria-label", "Evidence records");
+      if (hit.evidence.length) cited.append(...hit.evidence.map(chip));
+      else cited.append("None");
+      const records = element("div", "cols");
+      records.append(block("Customer record", record), block("Records cited", cited));
+      card.append(records);
       return card;
     }
 
-    function renderExplain(explanation) {
-      const panel = element("details", "explain");
-      panel.open = true;
-      const body = element("div", "explain-body");
-      panel.append(element("summary", "", "Explanation"), body);
-      if (explanation.changed_by) {
-        const { layer, why } = explanation.changed_by;
-        body.append(element("p", "notice", `Changed to review by the ${layer} layer: ${why}`));
-      }
+    // The side-by-side comparison for each person the alert may be about, in tabs when several fit.
+    function renderPeople(explanation) {
       const people = explanation.people;
-      if (!people.length) body.append(element("p", "", "No comparison was made for this hit."));
-      if (people.length === 1) body.append(renderPerson(people[0]));
+      const body = element("div");
+      if (!people.length) body.append(block("Comparison", element("p", "", "No comparison was made for this hit.")));
+      if (people.length === 1) body.append(renderPerson(people[0], false));
       if (people.length > 1) {
         const tabList = element("div", "person-tabs");
         tabList.setAttribute("role", "tablist");
-        tabList.setAttribute("aria-label", "People compared");
+        tabList.setAttribute("aria-label", "Customers who fit this alert");
         const content = element("div");
         const key = `person-${encodeURIComponent(JSON.stringify([explanation.alert_id, explanation.hit_id]))}`;
         content.id = `${key}-panel`;
         content.setAttribute("role", "tabpanel");
         content.tabIndex = 0;
-        const tabs = people.map((_, index) => {
-          const button = element("button", "", `Person ${index + 1}`);
+        const tabs = people.map((person, index) => {
+          const button = element("button", "", `Customer ${index + 1}${person.record_ids?.length ? ` · ${person.record_ids[0]}` : ""}`);
           button.type = "button";
           button.id = `${key}-${index + 1}`;
           button.setAttribute("role", "tab");
@@ -449,7 +882,7 @@
             tab.tabIndex = position === index ? 0 : -1;
           });
           content.setAttribute("aria-labelledby", tabs[index].id);
-          content.replaceChildren(renderPerson(people[index]));
+          content.replaceChildren(renderPerson(people[index], true));
         }
         tabList.addEventListener("keydown", event => {
           const index = tabs.indexOf(event.target);
@@ -470,90 +903,207 @@
         body.append(tabList, content);
         selectPerson(0);
       }
-      return panel;
+      return body;
     }
 
-    function renderPerson(person) {
-      const { customer, hit, states, score, briefing, review } = person;
-      const countries = values => values?.map(country => country.name || country.code).join(", ");
-      const comparisons = [
-        ["Name", customer.verified_name || customer.names?.[0], hit.name, states.name],
-        ["Date of birth", customer.dob, hit.dobs?.join(", "), states.dob],
-        ["Countries", countries(customer.countries), countries(hit.countries), states.location]
-      ];
-      const labels = { agree: "Agrees", mismatch: "Differs", unknown: "Unknown" };
+    function renderPerson(person, oneOfSeveral) {
+      const { score, briefing, review } = person;
+      const recordIds = person.record_ids ?? [];
       const content = element("div");
-      const table = element("table", "comparison");
+
+      const line = element("p", "customer-line");
+      if (!recordIds.length) {
+        line.append("No customer record was found, so only the details typed into the alert were compared.");
+      } else {
+        line.append("Our customer", ...recordIds.map(chip));
+        if (recordIds.length > 1) line.append(`${recordIds.length} records, one person`);
+      }
+      if (oneOfSeveral) {
+        line.append("If this is the customer:", pill(person.decision, undefined, true), plainReason(person.reason_code));
+      }
+      content.append(line, renderComparison(person));
+
+      if (briefing) {
+        const open = person.decision === "REVIEW";
+        const left = block(open ? "What is known" : "What decided it", list(briefing.decided_by));
+        if (briefing.strength && briefing.strength !== "open") {
+          left.append(element("p", "firm", `How firm: ${briefing.strength}.`));
+        }
+        const right = element("div");
+        if (briefing.would_settle.length) {
+          const box = element("div", "settle-box");
+          box.append(...(briefing.would_settle.length === 1
+            ? [element("p", "", briefing.would_settle[0])] : [list(briefing.would_settle)]));
+          right.append(block("What would settle it", box));
+        }
+        if (briefing.missing.length) right.append(block("Could not be checked", list(briefing.missing)));
+        if (briefing.caveats.length) right.append(block("Before relying on this", list(briefing.caveats)));
+        if (right.childElementCount) {
+          const columns = element("div", "cols");
+          columns.append(left, right);
+          content.append(columns);
+        } else {
+          content.append(left);
+        }
+      }
+      if (score) content.append(renderScore(score, person.customer.kind === "company"));
+      if (review) {
+        const share = Number.isFinite(review.agreement) && Number.isInteger(review.runs)
+          ? ` It gave this answer in ${Math.round(review.agreement * review.runs)} of ${plural(review.runs, "run")}.` : "";
+        content.append(block("Second opinion from a model",
+          element("p", "", `${review.verdict}: ${review.reason}${share}`),
+          element("p", "note", `Model ${review.model ?? "not recorded"}. It can turn a clearance into a review and nothing else.`)));
+      }
+      return content;
+    }
+
+    function renderComparison(person) {
+      const { customer, hit } = person;
+      const codes = person.all_codes ?? [person.reason_code];
+      const company = customer.kind === "company";
+      const found = (person.record_ids ?? []).length > 0;
+      const decided = decidedBy[person.reason_code] ?? [];
+
+      const cell = (value, ...lines) => {
+        const td = element("td");
+        td.append(value);
+        for (const parts of lines) {
+          if (!parts) continue;
+          const sub = element("div", "sub");
+          sub.append(...parts);
+          td.append(sub);
+        }
+        return td;
+      };
+      const value = text => element("div", "val", text);
+      const same = (left, right) => left.replace(/\s+/g, " ").trim().toLowerCase() === right.replace(/\s+/g, " ").trim().toLowerCase();
+
+      // Name: the verified legal name leads; the name on the record is shown when it is another one.
+      let ourName;
+      if (customer.verified_name) {
+        const main = value(customer.verified_name);
+        main.append(element("span", "verified", "Verified"));
+        const others = (customer.names ?? []).filter((name, index, names) =>
+          !same(name, customer.verified_name) && names.findIndex(other => same(other, name)) === index);
+        ourName = cell(main,
+          customer.verified_source && ["Identity check", chip(customer.verified_source)],
+          others.length && [`On the record as ${others.join(", ")}`]);
+      } else {
+        ourName = cell(value((customer.names ?? []).join(", ") || "Not known"),
+          [found ? "Not verified by an identity check" : "As typed into the alert"]);
+      }
+      const aliases = hit.aliases ?? [];
+      const theirName = cell(value(hit.name || "Not listed"),
+        aliases.length && [`Also listed as ${aliases.slice(0, 4).join(", ")}${aliases.length > 4 ? ` and ${aliases.length - 4} more` : ""}`]);
+
+      const dobs = hit.dobs ?? [];
+      const ourDob = cell(value(customer.dob || "Not known"),
+        customer.dob_source ? ["From", chip(customer.dob_source)] : customer.dob && !found && ["As typed into the alert"]);
+      const theirDob = cell(value(dobs.join(" or ") || "Not listed"), dobs.length && origins[hit.dob_origin] && [origins[hit.dob_origin]]);
+
+      const ourCountries = customer.countries ?? [];
+      const ours = element("td");
+      if (!ourCountries.length) ours.append(value("Not known"));
+      for (const country of ourCountries) {
+        ours.append(value(country.name || country.code));
+        if (country.sources?.length) {
+          const sub = element("div", "sub");
+          sub.append(...country.sources.map(chip));
+          ours.append(sub);
+        }
+      }
+      const theirCountries = (hit.countries ?? []).map(country => country.name || country.code);
+      const theirs = cell(value(theirCountries.join(", ") || "None listed"));
+
+      const rows = [
+        ["name", "Name", ourName, theirName, states[person.states.name]],
+        ["dob", company ? "Founded" : "Born", ourDob, theirDob, states[person.states.dob]],
+        ["location", theirCountries.length > 1 || ourCountries.length > 1 ? "Countries" : "Country", ours, theirs, states[person.states.location]]
+      ];
+      const kinds = { person: "A person", company: "A company" };
+      if (customer.kind && hit.kind && customer.kind !== hit.kind) {
+        rows.push(["type", "Type", cell(value(kinds[customer.kind] ?? customer.kind)), cell(value(kinds[hit.kind] ?? hit.kind)), states.mismatch]);
+      }
+      if (hit.earliest_report) {
+        const impossible = codes.includes("TEMPORAL_IMPOSSIBILITY");
+        rows.push(["timing", "Timing",
+          cell(value(customer.dob ? `${company ? "Founded" : "Born"} ${customer.dob}` : "Not known")),
+          cell(value(`First dated report ${hit.earliest_report}`)),
+          impossible ? { ...states.mismatch, text: "Impossible" } : { ...states.unknown, text: "No conflict found" }]);
+      }
+      if (hit.death) {
+        const before = codes.includes("DECEASED");
+        rows.push(["death", "Death",
+          cell(value(before ? "Screened after that date" : "Not compared")),
+          cell(value(`Died ${hit.death}`)),
+          before ? { ...states.mismatch, text: "Rules it out" } : { ...states.unknown, text: "No conflict found" }]);
+      }
+
+      const table = element("table", "compare");
+      const columns = element("colgroup");
+      columns.append(element("col", "field"), element("col"), element("col"), element("col", "outcome"));
+      table.append(columns);
       const head = table.createTHead().insertRow();
-      for (const label of ["", "Our customer", "List entry"]) {
+      for (const label of ["", found ? "Our customer" : "As screened", "Watchlist entry", "Outcome"]) {
         const header = element("th", "", label);
         header.scope = "col";
         head.append(header);
       }
       const body = table.createTBody();
-      for (const [field, ours, theirs, state] of comparisons) {
+      for (const [key, field, left, right, state] of rows) {
         const row = body.insertRow();
         const heading = element("th", "", field);
         heading.scope = "row";
-        heading.append(element("span", `tag ${state}`, labels[state]));
-        row.append(heading, element("td", "", ours || "Unknown"), element("td", "", theirs || "Unknown"));
+        const result = element("td");
+        const tag = element("span", "state");
+        tag.append(badge(state.tone, state.sign), state.text);
+        result.append(tag);
+        if (decided.includes(key)) {
+          row.className = "decided";
+          result.append(element("span", "decided-mark", "Decided it"));
+        }
+        row.append(heading, left, right, result);
       }
-      content.append(table);
-      if (score) content.append(renderScore(score));
-      if (briefing) content.append(renderBriefing(briefing));
-      if (review) {
-        const section = element("section", "explain-section");
-        section.append(element("h4", "", "Second opinion"), element("p", "", review.verdict),
-          element("p", "", review.reason),
-          element("p", "", `agreed in ${Math.round(review.agreement * review.runs)} of ${review.runs} runs`));
-        content.append(section);
-      }
-      return content;
+      return table;
     }
 
-    function renderScore(score) {
-      const section = element("section", "explain-section");
-      section.append(element("h4", "", "Strength of evidence"), element("p", "", score.band));
+    function renderScore(score, company) {
+      const legend = element("p", "legend");
+      const key = (tone, text) => {
+        const item = element("span");
+        const swatch = element("span", "swatch");
+        swatch.style.background = `var(--toward-${tone})`;
+        item.append(swatch, text);
+        return item;
+      };
+      legend.append(key("different", "Points to a different one"), key("same", "Points to the same"));
+      const section = block("Weight of evidence", legend);
+      const names = { "date of birth": company ? "Date founded" : "Date of birth" };
+      const line = (className, field, bits, detail) => {
+        const row = element("div", className);
+        const name = names[field] ?? field.charAt(0).toUpperCase() + field.slice(1);
+        row.title = `${name}: ${signed(bits)} bits`;
+        row.append(element("span", "", name), weightBar(bits),
+          element("span", "num", signed(bits)), element("span", "detail", detail));
+        return row;
+      };
       for (const { field, bits, detail } of score.contributions) {
-        const row = element("div", "contribution");
-        const bar = element("span", "bar");
-        bar.setAttribute("aria-hidden", "true");
-        const left = element("span", "half");
-        const right = element("span", "half");
-        const fill = element("span", "fill");
-        fill.style.width = `${Math.min(Math.abs(bits), BAR_FULL) / BAR_FULL * 100}%`;
-        (bits < 0 ? left : right).append(fill);
-        bar.append(left, right);
-        row.append(element("span", "", field), bar,
-          element("span", "bits", `${bits > 0 ? "+" : ""}${bits} ${Math.abs(bits) === 1 ? "bit" : "bits"}`),
-          element("span", "", detail));
-        section.append(row);
+        section.append(line("contribution", field, bits, detail ?? ""));
       }
+      if (Number.isFinite(score.bits)) {
+        section.append(line("contribution total", "Total", score.bits, score.band ?? ""));
+      }
+      section.append(element("p", "note", "Each fact adds or removes weight, in bits. The rules decide the outcome; " +
+        "this is a second view of the same facts and can never clear a hit."));
       if (score.conflict) {
-        section.append(element("p", "notice", "Cleared by policy, but the evidence leans the other way"));
-      }
-      return section;
-    }
-
-    function renderBriefing(briefing) {
-      const section = element("section", "explain-section");
-      section.append(element("h4", "", "Briefing"), element("h5", "", briefing.headline));
-      for (const [key, label] of [
-        ["decided_by", "Decided by"], ["missing", "Missing"],
-        ["would_settle", "Would settle"], ["caveats", "Caveats"]
-      ]) {
-        const entries = briefing[key];
-        if (!entries.length) continue;
-        const list = element("ul");
-        list.append(...entries.map(entry => element("li", "", entry)));
-        section.append(element("h5", "", label), list);
+        section.append(element("p", "notice", "Cleared by policy, but the evidence leans the other way."));
       }
       return section;
     }
 
     function bindFilePicker(id, validate, onLoad, onReset = () => {}) {
-      const input = document.getElementById(`${id}-file`);
-      const status = document.getElementById(`${id}-status`);
+      const input = byId(`${id}-file`);
+      const status = byId(`${id}-status`);
       let selection = 0;
       input.addEventListener("change", async () => {
         const currentSelection = ++selection;
@@ -570,7 +1120,7 @@
           if (currentSelection !== selection) return;
           const rows = parseJsonl(text, validate);
           const described = onLoad(rows);
-          status.textContent = described || `${rows.length} ${rows.length === 1 ? "record" : "records"} loaded.`;
+          status.textContent = described || `${plural(rows.length, "record")} loaded.`;
         } catch (error) {
           if (currentSelection !== selection) return;
           status.setAttribute("data-error", "");
@@ -593,14 +1143,13 @@
 
     function isExplainPerson(person) {
       if (!person?.customer || !person.hit || !person.states) return false;
-      const { customer, hit, states, score, briefing, review } = person;
+      const { customer, hit, states: found, score, briefing, review } = person;
       const isListOrUnknown = value => value == null || Array.isArray(value);
-      if (![customer.names, customer.countries, hit.dobs, hit.countries].every(isListOrUnknown)) return false;
+      if (![customer.names, customer.countries, hit.dobs, hit.countries, hit.aliases, person.record_ids, person.all_codes]
+        .every(isListOrUnknown)) return false;
       const countries = [...(customer.countries ?? []), ...(hit.countries ?? [])];
       if (!countries.every(country => country && typeof country === "object")) return false;
-      if (![states.name, states.dob, states.location].every(state => ["agree", "mismatch", "unknown"].includes(state))) {
-        return false;
-      }
+      if (![found.name, found.dob, found.location].every(state => Object.hasOwn(states, state))) return false;
       if (score && (!Array.isArray(score.contributions) ||
         !score.contributions.every(item => Number.isFinite(item?.bits)))) return false;
       if (briefing && !["decided_by", "missing", "would_settle", "caveats"].every(key => Array.isArray(briefing[key]))) {
@@ -613,17 +1162,103 @@
       return hasIds(row) && Array.isArray(row.people) && row.people.every(isExplainPerson);
     }
 
+    // The sample sits in two data blocks at the end of this page, written by tools/make_viewer_sample.py.
+    function showSample() {
+      let scored;
+      let explain;
+      try {
+        scored = parseJsonl(byId("sample-scored").textContent, isScoredRow);
+        explain = parseJsonl(byId("sample-explain").textContent, isExplainRow);
+      } catch {
+        return;
+      }
+      if (!scored.length) return;
+      for (const id of ["scored", "explain"]) {
+        const input = byId(`${id}-file`);
+        input.value = "";
+        input.removeAttribute("aria-invalid");
+        byId(`${id}-status`).removeAttribute("data-error");
+      }
+      sample.scored = true;
+      sample.explain = true;
+      loadExplain(explain);
+      loadScored(scored);
+      scoredStatus.textContent = `Built-in sample: ${plural(scored.length, "record")} loaded.`;
+      explainStatus.textContent = describeExplain();
+    }
+
     bindFilePicker("scored", isScoredRow, loadScored, () => {
-      summary.hidden = true;
-      queue.hidden = true;
-      alertGroups = [];
-      alertList.replaceChildren();
-      if (explainCount) explainStatus.textContent = describeExplain();
+      sample.scored = false;
+      // The sample's explanations describe the sample's hits only.
+      if (sample.explain) {
+        sample.explain = false;
+        loadExplain([]);
+      }
+      unloadScored();
+      explainStatus.textContent = describeExplain();
     });
-    bindFilePicker("explain", isExplainRow, loadExplain, () => loadExplain([]));
+    bindFilePicker("explain", isExplainRow, loadExplain, () => {
+      sample.explain = false;
+      loadExplain([]);
+      showState();
+    });
+    byId("load-sample").addEventListener("click", showSample);
+    byId("view-review").addEventListener("click", () => setView("review"));
+    byId("view-all").addEventListener("click", () => setView("all"));
+    reviewSort.addEventListener("change", () => renderReview());
     decisionFilter.addEventListener("change", () => renderAlerts());
     reasonFilter.addEventListener("change", () => renderAlerts());
     idFilter.addEventListener("input", () => renderAlerts());
+
+    // j and k walk the list on screen, one alert or one queued hit at a time.
+    document.addEventListener("keydown", event => {
+      if (event.defaultPrevented || event.ctrlKey || event.metaKey || event.altKey) return;
+      if (event.key !== "j" && event.key !== "k") return;
+      if (queue.hidden || event.target.closest?.("input, select, textarea")) return;
+      const items = Array.from((view === "review" ? reviewList : alertList).children, node => node.firstElementChild);
+      if (!items.length) return;
+      const at = items.indexOf(document.activeElement?.closest?.(".row, .alert")?.firstElementChild);
+      const next = at === -1 ? 0 : Math.min(items.length - 1, Math.max(0, at + (event.key === "j" ? 1 : -1)));
+      event.preventDefault();
+      items[next].focus();
+      items[next].scrollIntoView({ block: "nearest" });
+    });
+
+    document.addEventListener("DOMContentLoaded", showSample);
   </script>
+  <!-- The built-in sample: invented data, decided by the real system. Rewrite it with
+       `python tools/make_viewer_sample.py`; do not edit it by hand. -->
+  <script id="sample-scored" type="application/x-ndjson">
+{"hit_id": "H-000026", "alert_id": "A-000025", "decision": "DIFFERENT_ENTITY", "reason_code": "DOB_MISMATCH", "customer_record_id": "CUS-000033", "reason": "The alert's account reference ACC-000023 leads to customer record CUS-000033. The customer's date of birth is 1977-12-13 (KYC-000024) but the hit's listed date of birth is 1951.", "evidence": ["KYC-000024"]}
+{"hit_id": "H-000027", "alert_id": "A-000025", "decision": "DIFFERENT_ENTITY", "reason_code": "LOCATION_MISMATCH", "customer_record_id": "CUS-000033", "reason": "The alert's account reference ACC-000023 leads to customer record CUS-000033. The customer is linked only to Germany but the hit is linked only to Switzerland.", "evidence": ["CUS-000033", "KYC-000024"]}
+{"hit_id": "H-00002D", "alert_id": "A-00002C", "decision": "SAME_ENTITY", "reason_code": "NAME_DOB_MATCH", "customer_record_id": "CUS-000040", "reason": "The alert's email user42@mail.example leads to customer record CUS-000040. The customer's date of birth 1975-06-02 (NOTE-00002B) agrees with the hit's 1975. Both the customer and the hit are linked to Singapore. The customer's name agrees with the hit's name Wei Li.", "evidence": ["CUS-000040", "NOTE-00002B"]}
+{"hit_id": "H-00002E", "alert_id": "A-00002C", "decision": "REVIEW", "reason_code": "INSUFFICIENT_DATA", "customer_record_id": "CUS-000040", "reason": "The alert's email user42@mail.example leads to customer record CUS-000040. The customer's date of birth 1975-06-02 (NOTE-00002B) agrees with the hit's 1975. The customer's name agrees with the hit's name Li Wei. Every country tied to the customer (Singapore) differs from every country tied to the hit (China), and a country difference does not clear a hit whose name and date of birth agree, so a person has to review it.", "evidence": ["CUS-000040", "NOTE-00002B"]}
+{"hit_id": "H-000034", "alert_id": "A-000033", "decision": "REVIEW", "reason_code": "INSUFFICIENT_DATA", "customer_record_id": "CUS-000047", "reason": "The alert's login handle login49 leads to customer record CUS-000047. Both the customer and the hit are linked to Bulgaria. The customer's name agrees with the hit's name Anna Petrova. Nothing in the customer's records contradicts the hit, and the date of birth cannot be compared with it, so the hit can be neither cleared nor confirmed.", "evidence": ["CUS-000047", "KYC-000032"]}
+{"hit_id": "H-00003E", "alert_id": "A-00003D", "decision": "REVIEW", "reason_code": "AMBIGUOUS_CUSTOMER_RECORD", "customer_record_id": "AMBIGUOUS", "reason": "2 different people fit the screened name, date of birth and country (records CUS-000053, CUS-000057). They lead to different decisions (DIFFERENT_ENTITY, SAME_ENTITY), so a person has to review it.", "evidence": ["CUS-000053", "KYC-000038", "KYC-00003C"]}
+{"hit_id": "H-000044", "alert_id": "A-000043", "decision": "SAME_ENTITY", "reason_code": "NAME_LOCATION_MATCH", "customer_record_id": "CUS-000063", "reason": "The alert's account reference ACC-000041 leads to customer record CUS-000063. Both the customer and the hit are linked to Spain. The customer's name agrees with the hit's name Marisol, Sociedad Anonima.", "evidence": ["CUS-000063", "KYC-000042"]}
+{"hit_id": "H-00004A", "alert_id": "A-000049", "decision": "DIFFERENT_ENTITY", "reason_code": "TEMPORAL_IMPOSSIBILITY", "customer_record_id": "CUS-000069", "reason": "The alert's account reference ACC-000047 leads to customer record CUS-000069. The customer was born in 2008 (KYC-000048), so they were at most 12 when the hit's profile reports activity on 2020-06-09.", "evidence": ["KYC-000048"]}
+{"hit_id": "H-000050", "alert_id": "A-00004F", "decision": "DIFFERENT_ENTITY", "reason_code": "NAME_MISMATCH_VERIFIED", "customer_record_id": "CUS-000075", "reason": "The alert's login handle login77 leads to customer record CUS-000075. The customer's verified name is GIULIA BELLINI (KYC-00004E), which does not match the hit's name Bellini, Marco.", "evidence": ["KYC-00004E"]}
+{"hit_id": "H-000056", "alert_id": "A-000055", "decision": "DIFFERENT_ENTITY", "reason_code": "DECEASED", "customer_record_id": "CUS-000081", "reason": "The alert's account reference ACC-000053 leads to customer record CUS-000081. The hit's profile gives a date of death of 2019-06, before the customer was screened on 2026-11-06.", "evidence": ["H-000056#deceased_date"]}
+{"hit_id": "H-00005C", "alert_id": "A-00005B", "decision": "REVIEW", "reason_code": "INSUFFICIENT_DATA", "customer_record_id": "CUS-000087", "reason": "The alert's account reference ACC-000059 leads to customer record CUS-000087. The customer's name agrees with the hit's name Nadia Rahman. Nothing in the customer's records contradicts the hit, and the date of birth cannot be compared with it, so the hit can be neither cleared nor confirmed.", "evidence": ["CUS-000087"]}
+{"hit_id": "H-00005E", "alert_id": "A-00005D", "decision": "REVIEW", "reason_code": "INSUFFICIENT_DATA", "customer_record_id": null, "reason": "No customer record fits the screened name, date of birth and country, so only the screened details could be compared. The customer's date of birth 1962-07-07 agrees with the hit's 1962. The customer's name agrees with the hit's name Hale, Viktor. The screened details are unverified and belong to no known record, so they can neither clear nor confirm the hit and a person has to review it.", "evidence": []}
+{"hit_id": "H-000064", "alert_id": "A-000063", "decision": "DIFFERENT_ENTITY", "reason_code": "ENTITY_TYPE_MISMATCH", "customer_record_id": "CUS-000095", "reason": "The alert's account reference ACC-000061 leads to customer record CUS-000095. The customer is a person but the hit is a company.", "evidence": ["CUS-000095"]}
+{"hit_id": "H-00006A", "alert_id": "A-000069", "decision": "DIFFERENT_ENTITY", "reason_code": "DOB_MISMATCH", "customer_record_id": "CUS-000101", "reason": "The alert's account reference ACC-000067 leads to customer record CUS-000101. The customer's date of birth is 1990-04-04 (KYC-000068) but the hit's search results put its birth year at 1962 or 1963.", "evidence": ["KYC-000068", "SR-00006C"]}
+</script>
+  <script id="sample-explain" type="application/x-ndjson">
+{"hit_id": "H-000026", "alert_id": "A-000025", "decision": "DIFFERENT_ENTITY", "reason_code": "DOB_MISMATCH", "customer_record_id": "CUS-000033", "rules": {"decision": "DIFFERENT_ENTITY", "reason_code": "DOB_MISMATCH"}, "changed_by": null, "layers": {"score": "on", "briefing": "on", "reviewer": "off", "reader": "off"}, "people": [{"record_ids": ["CUS-000033"], "decision": "DIFFERENT_ENTITY", "reason_code": "DOB_MISMATCH", "all_codes": ["DOB_MISMATCH"], "customer": {"kind": "person", "verified_name": "Lars Holm", "verified_source": "KYC-000024", "names": ["Lars Holm"], "dob": "1977-12-13", "dob_source": "KYC-000024", "countries": [{"code": "DE", "name": "Germany", "sources": ["CUS-000033", "KYC-000024"]}]}, "hit": {"kind": "person", "name": "Holm, Lars", "aliases": [], "dobs": ["1951"], "dob_origin": "listed", "countries": [{"code": "DE", "name": "Germany"}], "earliest_report": null, "death": null}, "states": {"name": "agree", "dob": "mismatch", "location": "agree"}, "score": {"bits": -7.0, "band": "some evidence of a different one", "contributions": [{"field": "name", "state": "agree", "bits": 4.0, "detail": "2 parts match; fewer than 1 customer in 20 would share them by chance"}, {"field": "date of birth", "state": "mismatch", "bits": -14.0, "detail": "1977-12-13 against 1951: 26 years apart"}, {"field": "country", "state": "agree", "bits": 3.0, "detail": "Germany, shared by about 1 customer in 10"}], "conflict": false}, "briefing": {"headline": "Different person: born 26 years apart.", "decided_by": ["The customer's date of birth is 1977-12-13 (KYC-000024) but the hit's listed date of birth is 1951."], "missing": [], "would_settle": [], "strength": "one ground, from a verified identity check", "caveats": []}, "review": null}]}
+{"hit_id": "H-000027", "alert_id": "A-000025", "decision": "DIFFERENT_ENTITY", "reason_code": "LOCATION_MISMATCH", "customer_record_id": "CUS-000033", "rules": {"decision": "DIFFERENT_ENTITY", "reason_code": "LOCATION_MISMATCH"}, "changed_by": null, "layers": {"score": "on", "briefing": "on", "reviewer": "off", "reader": "off"}, "people": [{"record_ids": ["CUS-000033"], "decision": "DIFFERENT_ENTITY", "reason_code": "LOCATION_MISMATCH", "all_codes": ["LOCATION_MISMATCH"], "customer": {"kind": "person", "verified_name": "Lars Holm", "verified_source": "KYC-000024", "names": ["Lars Holm"], "dob": "1977-12-13", "dob_source": "KYC-000024", "countries": [{"code": "DE", "name": "Germany", "sources": ["CUS-000033", "KYC-000024"]}]}, "hit": {"kind": "person", "name": "Lars Holm", "aliases": ["L. Holm"], "dobs": [], "dob_origin": null, "countries": [{"code": "CH", "name": "Switzerland"}], "earliest_report": null, "death": null}, "states": {"name": "agree", "dob": "unknown", "location": "mismatch"}, "score": {"bits": 0.7, "band": "inconclusive", "contributions": [{"field": "name", "state": "agree", "bits": 4.0, "detail": "2 parts match; fewer than 1 customer in 20 would share them by chance"}, {"field": "date of birth", "state": "unknown", "bits": 0.0, "detail": "The hit gives no date of birth"}, {"field": "country", "state": "mismatch", "bits": -3.3, "detail": "Germany against Switzerland"}], "conflict": false}, "briefing": {"headline": "Different person by policy: no country in common.", "decided_by": ["The customer is linked only to Germany but the hit is linked only to Switzerland."], "missing": ["The hit gives no date of birth in its field, its profile notes or search results about it."], "would_settle": [], "strength": "one ground, country only", "caveats": ["The name agrees and no date of birth could be compared, so this clearance rests on country alone."]}, "review": null}]}
+{"hit_id": "H-00002D", "alert_id": "A-00002C", "decision": "SAME_ENTITY", "reason_code": "NAME_DOB_MATCH", "customer_record_id": "CUS-000040", "rules": {"decision": "SAME_ENTITY", "reason_code": "NAME_DOB_MATCH"}, "changed_by": null, "layers": {"score": "on", "briefing": "on", "reviewer": "off", "reader": "off"}, "people": [{"record_ids": ["CUS-000040"], "decision": "SAME_ENTITY", "reason_code": "NAME_DOB_MATCH", "all_codes": ["NAME_DOB_MATCH", "NAME_DOB_LOCATION_MATCH"], "customer": {"kind": "person", "verified_name": "LI WEI", "verified_source": "NOTE-00002B", "names": ["Li Wei"], "dob": "1975-06-02", "dob_source": "NOTE-00002B", "countries": [{"code": "SG", "name": "Singapore", "sources": ["CUS-000040", "NOTE-00002B"]}]}, "hit": {"kind": "person", "name": "Wei Li", "aliases": [], "dobs": ["1975"], "dob_origin": "listed", "countries": [{"code": "SG", "name": "Singapore"}], "earliest_report": null, "death": null}, "states": {"name": "agree", "dob": "agree", "location": "agree"}, "score": {"bits": 12.8, "band": "strong evidence of the same", "contributions": [{"field": "name", "state": "agree", "bits": 4.0, "detail": "2 parts match; fewer than 1 customer in 20 would share them by chance"}, {"field": "date of birth", "state": "agree", "bits": 5.8, "detail": "1975 is the hit's year"}, {"field": "country", "state": "agree", "bits": 3.0, "detail": "Singapore, shared by about 1 customer in 20"}], "conflict": false}, "briefing": {"headline": "Same person: name and date of birth agree, and so does the country.", "decided_by": ["The customer's date of birth 1975-06-02 (NOTE-00002B) agrees with the hit's 1975.", "Both the customer and the hit are linked to Singapore.", "The customer's name agrees with the hit's name Wei Li."], "missing": ["The hit gives a birth year only, so the day and month could not be compared."], "would_settle": [], "strength": "name, date of birth and country agree", "caveats": []}, "review": null}]}
+{"hit_id": "H-00002E", "alert_id": "A-00002C", "decision": "REVIEW", "reason_code": "INSUFFICIENT_DATA", "customer_record_id": "CUS-000040", "rules": {"decision": "REVIEW", "reason_code": "INSUFFICIENT_DATA"}, "changed_by": null, "layers": {"score": "on", "briefing": "on", "reviewer": "off", "reader": "off"}, "people": [{"record_ids": ["CUS-000040"], "decision": "REVIEW", "reason_code": "INSUFFICIENT_DATA", "all_codes": ["INSUFFICIENT_DATA"], "customer": {"kind": "person", "verified_name": "LI WEI", "verified_source": "NOTE-00002B", "names": ["Li Wei"], "dob": "1975-06-02", "dob_source": "NOTE-00002B", "countries": [{"code": "SG", "name": "Singapore", "sources": ["CUS-000040", "NOTE-00002B"]}]}, "hit": {"kind": "person", "name": "Li Wei", "aliases": [], "dobs": ["1975"], "dob_origin": "listed", "countries": [{"code": "CN", "name": "China"}], "earliest_report": null, "death": null}, "states": {"name": "agree", "dob": "agree", "location": "mismatch"}, "score": {"bits": 6.5, "band": "some evidence of the same", "contributions": [{"field": "name", "state": "agree", "bits": 4.0, "detail": "2 parts match; fewer than 1 customer in 20 would share them by chance"}, {"field": "date of birth", "state": "agree", "bits": 5.8, "detail": "1975 is the hit's year"}, {"field": "country", "state": "mismatch", "bits": -3.3, "detail": "Singapore against China"}], "conflict": false}, "briefing": {"headline": "Needs a person: name and date of birth agree, but no country is shared.", "decided_by": ["The customer's date of birth 1975-06-02 (NOTE-00002B) agrees with the hit's 1975.", "The customer's name agrees with the hit's name Li Wei.", "Every country tied to the customer (Singapore) differs from every country tied to the hit (China)."], "missing": ["The hit gives a birth year only, so the day and month could not be compared."], "would_settle": ["Evidence that ties the customer to China would confirm the match; a country difference alone cannot clear a hit whose name and date of birth agree."], "strength": "open", "caveats": []}, "review": null}]}
+{"hit_id": "H-000034", "alert_id": "A-000033", "decision": "REVIEW", "reason_code": "INSUFFICIENT_DATA", "customer_record_id": "CUS-000047", "rules": {"decision": "REVIEW", "reason_code": "INSUFFICIENT_DATA"}, "changed_by": null, "layers": {"score": "on", "briefing": "on", "reviewer": "off", "reader": "off"}, "people": [{"record_ids": ["CUS-000047"], "decision": "REVIEW", "reason_code": "INSUFFICIENT_DATA", "all_codes": ["INSUFFICIENT_DATA"], "customer": {"kind": "person", "verified_name": "Anna Petrova", "verified_source": "KYC-000032", "names": ["Anna Petrova"], "dob": "1988-04-21", "dob_source": "KYC-000032", "countries": [{"code": "BG", "name": "Bulgaria", "sources": ["CUS-000047", "KYC-000032"]}]}, "hit": {"kind": "person", "name": "Anna Petrova", "aliases": [], "dobs": [], "dob_origin": null, "countries": [{"code": "BG", "name": "Bulgaria"}], "earliest_report": null, "death": null}, "states": {"name": "agree", "dob": "unknown", "location": "agree"}, "score": {"bits": 7.0, "band": "some evidence of the same", "contributions": [{"field": "name", "state": "agree", "bits": 4.0, "detail": "2 parts match; fewer than 1 customer in 20 would share them by chance"}, {"field": "date of birth", "state": "unknown", "bits": 0.0, "detail": "The hit gives no date of birth"}, {"field": "country", "state": "agree", "bits": 3.0, "detail": "Bulgaria, shared by about 1 customer in 20"}], "conflict": false}, "briefing": {"headline": "Needs a person: name and country agree, but there is no date of birth to compare.", "decided_by": ["Both the customer and the hit are linked to Bulgaria.", "The customer's name agrees with the hit's name Anna Petrova."], "missing": ["The hit gives no date of birth in its field, its profile notes or search results about it."], "would_settle": ["A date of birth for the listed person would settle it: 1988, with nothing else against it, would confirm the match, and 1986 or earlier, or 1990 or later, would clear the hit."], "strength": "open", "caveats": []}, "review": null}]}
+{"hit_id": "H-00003E", "alert_id": "A-00003D", "decision": "REVIEW", "reason_code": "AMBIGUOUS_CUSTOMER_RECORD", "customer_record_id": "AMBIGUOUS", "rules": {"decision": "REVIEW", "reason_code": "AMBIGUOUS_CUSTOMER_RECORD"}, "changed_by": null, "layers": {"score": "on", "briefing": "on", "reviewer": "off", "reader": "off"}, "people": [{"record_ids": ["CUS-000053"], "decision": "SAME_ENTITY", "reason_code": "NAME_DOB_MATCH", "all_codes": ["NAME_DOB_MATCH", "NAME_DOB_LOCATION_MATCH"], "customer": {"kind": "person", "verified_name": "CHEN MING", "verified_source": "KYC-000038", "names": ["Chen Ming"], "dob": "1988-03-14", "dob_source": "KYC-000038", "countries": [{"code": "CN", "name": "China", "sources": ["CUS-000053", "KYC-000038"]}]}, "hit": {"kind": "person", "name": "Ming Chen", "aliases": [], "dobs": ["1988"], "dob_origin": "listed", "countries": [{"code": "CN", "name": "China"}], "earliest_report": null, "death": null}, "states": {"name": "agree", "dob": "agree", "location": "agree"}, "score": {"bits": 12.8, "band": "strong evidence of the same", "contributions": [{"field": "name", "state": "agree", "bits": 4.0, "detail": "2 parts match; fewer than 1 customer in 20 would share them by chance"}, {"field": "date of birth", "state": "agree", "bits": 5.8, "detail": "1988 is the hit's year"}, {"field": "country", "state": "agree", "bits": 3.0, "detail": "China, shared by about 1 customer in 10"}], "conflict": false}, "briefing": {"headline": "Same person: name and date of birth agree, and so does the country.", "decided_by": ["The customer's date of birth 1988-03-14 (KYC-000038) agrees with the hit's 1988.", "Both the customer and the hit are linked to China.", "The customer's name agrees with the hit's name Ming Chen."], "missing": ["The hit gives a birth year only, so the day and month could not be compared."], "would_settle": [], "strength": "name, date of birth and country agree", "caveats": []}, "review": null}, {"record_ids": ["CUS-000057"], "decision": "DIFFERENT_ENTITY", "reason_code": "DOB_MISMATCH", "all_codes": ["DOB_MISMATCH"], "customer": {"kind": "person", "verified_name": "CHEN MING", "verified_source": "KYC-00003C", "names": ["Chen Ming"], "dob": "1958-03-14", "dob_source": "KYC-00003C", "countries": [{"code": "CN", "name": "China", "sources": ["CUS-000057", "KYC-00003C"]}]}, "hit": {"kind": "person", "name": "Ming Chen", "aliases": [], "dobs": ["1988"], "dob_origin": "listed", "countries": [{"code": "CN", "name": "China"}], "earliest_report": null, "death": null}, "states": {"name": "agree", "dob": "mismatch", "location": "agree"}, "score": {"bits": -7.0, "band": "some evidence of a different one", "contributions": [{"field": "name", "state": "agree", "bits": 4.0, "detail": "2 parts match; fewer than 1 customer in 20 would share them by chance"}, {"field": "date of birth", "state": "mismatch", "bits": -14.0, "detail": "1958-03-14 against 1988: 30 years apart"}, {"field": "country", "state": "agree", "bits": 3.0, "detail": "China, shared by about 1 customer in 10"}], "conflict": false}, "briefing": {"headline": "Different person: born 30 years apart.", "decided_by": ["The customer's date of birth is 1958-03-14 (KYC-00003C) but the hit's listed date of birth is 1988."], "missing": [], "would_settle": [], "strength": "one ground, from a verified identity check", "caveats": []}, "review": null}]}
+{"hit_id": "H-000044", "alert_id": "A-000043", "decision": "SAME_ENTITY", "reason_code": "NAME_LOCATION_MATCH", "customer_record_id": "CUS-000063", "rules": {"decision": "SAME_ENTITY", "reason_code": "NAME_LOCATION_MATCH"}, "changed_by": null, "layers": {"score": "on", "briefing": "on", "reviewer": "off", "reader": "off"}, "people": [{"record_ids": ["CUS-000063"], "decision": "SAME_ENTITY", "reason_code": "NAME_LOCATION_MATCH", "all_codes": ["NAME_LOCATION_MATCH"], "customer": {"kind": "company", "verified_name": "Marisol SA", "verified_source": "KYC-000042", "names": ["Marisol SA"], "dob": "2001-01-01", "dob_source": "KYC-000042", "countries": [{"code": "ES", "name": "Spain", "sources": ["CUS-000063", "KYC-000042"]}]}, "hit": {"kind": "company", "name": "Marisol, Sociedad Anonima", "aliases": [], "dobs": [], "dob_origin": null, "countries": [{"code": "ES", "name": "Spain"}], "earliest_report": null, "death": null}, "states": {"name": "agree", "dob": "unknown", "location": "agree"}, "score": {"bits": 7.0, "band": "some evidence of the same", "contributions": [{"field": "name", "state": "agree", "bits": 4.0, "detail": "1 part matches; about 1 customer in 20 shares it"}, {"field": "date of birth", "state": "unknown", "bits": 0.0, "detail": "The hit gives no incorporation date"}, {"field": "country", "state": "agree", "bits": 3.0, "detail": "Spain, shared by about 1 customer in 10"}], "conflict": false}, "briefing": {"headline": "Same company: name and country agree.", "decided_by": ["Both the customer and the hit are linked to Spain.", "The customer's name agrees with the hit's name Marisol, Sociedad Anonima."], "missing": ["The hit gives no incorporation date."], "would_settle": [], "strength": "name and country agree", "caveats": []}, "review": null}]}
+{"hit_id": "H-00004A", "alert_id": "A-000049", "decision": "DIFFERENT_ENTITY", "reason_code": "TEMPORAL_IMPOSSIBILITY", "customer_record_id": "CUS-000069", "rules": {"decision": "DIFFERENT_ENTITY", "reason_code": "TEMPORAL_IMPOSSIBILITY"}, "changed_by": null, "layers": {"score": "on", "briefing": "on", "reviewer": "off", "reader": "off"}, "people": [{"record_ids": ["CUS-000069"], "decision": "DIFFERENT_ENTITY", "reason_code": "TEMPORAL_IMPOSSIBILITY", "all_codes": ["TEMPORAL_IMPOSSIBILITY"], "customer": {"kind": "person", "verified_name": "Tom Okafor", "verified_source": "KYC-000048", "names": ["Tom Okafor"], "dob": "2008-02-02", "dob_source": "KYC-000048", "countries": [{"code": "NG", "name": "Nigeria", "sources": ["CUS-000069", "KYC-000048"]}]}, "hit": {"kind": "person", "name": "Thomas Okafor", "aliases": [], "dobs": [], "dob_origin": null, "countries": [{"code": "NG", "name": "Nigeria"}], "earliest_report": "2020-06-09", "death": null}, "states": {"name": "agree", "dob": "unknown", "location": "agree"}, "score": {"bits": -3.0, "band": "some evidence of a different one", "contributions": [{"field": "name", "state": "agree", "bits": 4.0, "detail": "2 parts match; fewer than 1 customer in 20 would share them by chance"}, {"field": "date of birth", "state": "unknown", "bits": 0.0, "detail": "The hit gives no date of birth"}, {"field": "country", "state": "agree", "bits": 3.0, "detail": "Nigeria, shared by about 1 customer in 10"}, {"field": "timing", "state": "mismatch", "bits": -10.0, "detail": "The customer was too young at the hit's earliest dated report, 2020-06-09"}], "conflict": false}, "briefing": {"headline": "Different person: too young when the earliest report was published.", "decided_by": ["The customer was born in 2008 (KYC-000048), so they were at most 12 when the hit's profile reports activity on 2020-06-09."], "missing": ["The hit gives no date of birth in its field, its profile notes or search results about it."], "would_settle": [], "strength": "one ground, timing", "caveats": []}, "review": null}]}
+{"hit_id": "H-000050", "alert_id": "A-00004F", "decision": "DIFFERENT_ENTITY", "reason_code": "NAME_MISMATCH_VERIFIED", "customer_record_id": "CUS-000075", "rules": {"decision": "DIFFERENT_ENTITY", "reason_code": "NAME_MISMATCH_VERIFIED"}, "changed_by": null, "layers": {"score": "on", "briefing": "on", "reviewer": "off", "reader": "off"}, "people": [{"record_ids": ["CUS-000075"], "decision": "DIFFERENT_ENTITY", "reason_code": "NAME_MISMATCH_VERIFIED", "all_codes": ["NAME_MISMATCH_VERIFIED"], "customer": {"kind": "person", "verified_name": "GIULIA BELLINI", "verified_source": "KYC-00004E", "names": ["Marco Bellini"], "dob": "1981-10-09", "dob_source": "KYC-00004E", "countries": [{"code": "IT", "name": "Italy", "sources": ["CUS-000075", "KYC-00004E"]}]}, "hit": {"kind": "person", "name": "Bellini, Marco", "aliases": [], "dobs": [], "dob_origin": null, "countries": [{"code": "IT", "name": "Italy"}], "earliest_report": null, "death": null}, "states": {"name": "mismatch", "dob": "unknown", "location": "agree"}, "score": {"bits": -3.0, "band": "some evidence of a different one", "contributions": [{"field": "name", "state": "mismatch", "bits": -6.0, "detail": "The verified legal name GIULIA BELLINI agrees with none of the hit's names"}, {"field": "date of birth", "state": "unknown", "bits": 0.0, "detail": "The hit gives no date of birth"}, {"field": "country", "state": "agree", "bits": 3.0, "detail": "Italy, shared by about 1 customer in 20"}], "conflict": false}, "briefing": {"headline": "Different person: the verified legal name is not the listed name.", "decided_by": ["The customer's verified name is GIULIA BELLINI (KYC-00004E), which does not match the hit's name Bellini, Marco."], "missing": ["The hit gives no date of birth in its field, its profile notes or search results about it."], "would_settle": [], "strength": "one ground, the verified legal name", "caveats": []}, "review": null}]}
+{"hit_id": "H-000056", "alert_id": "A-000055", "decision": "DIFFERENT_ENTITY", "reason_code": "DECEASED", "customer_record_id": "CUS-000081", "rules": {"decision": "DIFFERENT_ENTITY", "reason_code": "DECEASED"}, "changed_by": null, "layers": {"score": "on", "briefing": "on", "reviewer": "off", "reader": "off"}, "people": [{"record_ids": ["CUS-000081"], "decision": "DIFFERENT_ENTITY", "reason_code": "DECEASED", "all_codes": ["DECEASED"], "customer": {"kind": "person", "verified_name": "Erik Lund", "verified_source": "KYC-000054", "names": ["Erik Lund"], "dob": "1970-05-14", "dob_source": "KYC-000054", "countries": [{"code": "SE", "name": "Sweden", "sources": ["CUS-000081", "KYC-000054"]}]}, "hit": {"kind": "person", "name": "Lund, Erik", "aliases": [], "dobs": [], "dob_origin": null, "countries": [{"code": "SE", "name": "Sweden"}], "earliest_report": null, "death": "2019-06"}, "states": {"name": "agree", "dob": "unknown", "location": "agree"}, "score": {"bits": -3.0, "band": "some evidence of a different one", "contributions": [{"field": "name", "state": "agree", "bits": 4.0, "detail": "2 parts match; fewer than 1 customer in 20 would share them by chance"}, {"field": "date of birth", "state": "unknown", "bits": 0.0, "detail": "The hit gives no date of birth"}, {"field": "country", "state": "agree", "bits": 3.0, "detail": "Sweden, shared by about 1 customer in 20"}, {"field": "death", "state": "mismatch", "bits": -10.0, "detail": "The hit's profile gives a date of death of 2019-06, before the customer was screened"}], "conflict": false}, "briefing": {"headline": "Different person: the listed person died before this customer was screened.", "decided_by": ["The hit's profile gives a date of death of 2019-06, before the customer was screened on 2026-11-06."], "missing": ["The hit gives no date of birth in its field, its profile notes or search results about it."], "would_settle": [], "strength": "one ground, date of death", "caveats": []}, "review": null}]}
+{"hit_id": "H-00005C", "alert_id": "A-00005B", "decision": "REVIEW", "reason_code": "INSUFFICIENT_DATA", "customer_record_id": "CUS-000087", "rules": {"decision": "REVIEW", "reason_code": "INSUFFICIENT_DATA"}, "changed_by": null, "layers": {"score": "on", "briefing": "on", "reviewer": "off", "reader": "off"}, "people": [{"record_ids": ["CUS-000087"], "decision": "REVIEW", "reason_code": "INSUFFICIENT_DATA", "all_codes": ["INSUFFICIENT_DATA"], "customer": {"kind": "person", "verified_name": "Nadia Rahman", "verified_source": "KYC-00005A", "names": ["Nadia Rahman"], "dob": "1990-02-27", "dob_source": "KYC-00005A", "countries": [{"code": "BD", "name": "Bangladesh", "sources": ["CUS-000087", "KYC-00005A"]}]}, "hit": {"kind": "person", "name": "Nadia Rahman", "aliases": [], "dobs": [], "dob_origin": null, "countries": [], "earliest_report": null, "death": null}, "states": {"name": "agree", "dob": "unknown", "location": "unknown"}, "score": {"bits": 4.0, "band": "some evidence of the same", "contributions": [{"field": "name", "state": "agree", "bits": 4.0, "detail": "2 parts match; fewer than 1 customer in 20 would share them by chance"}, {"field": "date of birth", "state": "unknown", "bits": 0.0, "detail": "The hit gives no date of birth"}, {"field": "country", "state": "unknown", "bits": 0.0, "detail": "The hit is tied to no country"}], "conflict": false}, "briefing": {"headline": "Needs a person: the name agrees, but there is no date of birth to compare.", "decided_by": ["The customer's name agrees with the hit's name Nadia Rahman."], "missing": ["The hit gives no date of birth in its field, its profile notes or search results about it.", "No country is tied to the hit."], "would_settle": ["A date of birth for the listed person would settle it: 1990, with nothing else against it, would confirm the match, and 1988 or earlier, or 1992 or later, would clear the hit."], "strength": "open", "caveats": []}, "review": null}]}
+{"hit_id": "H-00005E", "alert_id": "A-00005D", "decision": "REVIEW", "reason_code": "INSUFFICIENT_DATA", "customer_record_id": null, "rules": {"decision": "REVIEW", "reason_code": "INSUFFICIENT_DATA"}, "changed_by": null, "layers": {"score": "on", "briefing": "on", "reviewer": "off", "reader": "off"}, "people": [{"record_ids": [], "decision": "REVIEW", "reason_code": "INSUFFICIENT_DATA", "all_codes": ["INSUFFICIENT_DATA"], "customer": {"kind": "person", "verified_name": null, "verified_source": null, "names": ["Viktor Hale"], "dob": "1962-07-07", "dob_source": null, "countries": []}, "hit": {"kind": "person", "name": "Hale, Viktor", "aliases": [], "dobs": ["1962"], "dob_origin": "listed", "countries": [{"code": "CA", "name": "Canada"}], "earliest_report": null, "death": null}, "states": {"name": "agree", "dob": "agree", "location": "unknown"}, "score": {"bits": 9.8, "band": "strong evidence of the same", "contributions": [{"field": "name", "state": "agree", "bits": 4.0, "detail": "2 parts match; fewer than 1 customer in 20 would share them by chance"}, {"field": "date of birth", "state": "agree", "bits": 5.8, "detail": "1962 is the hit's year"}, {"field": "country", "state": "unknown", "bits": 0.0, "detail": "The customer is tied to no country"}], "conflict": false}, "briefing": {"headline": "Needs a person: no customer record fits the alert.", "decided_by": ["The customer's date of birth 1962-07-07 agrees with the hit's 1962.", "The customer's name agrees with the hit's name Hale, Viktor."], "missing": ["No customer record was found, so only the screened details were compared.", "The hit gives a birth year only, so the day and month could not be compared.", "No country is tied to the customer."], "would_settle": ["Identifying the customer in the system of record would settle it: screened details alone can neither clear nor confirm a hit."], "strength": "open", "caveats": []}, "review": null}]}
+{"hit_id": "H-000064", "alert_id": "A-000063", "decision": "DIFFERENT_ENTITY", "reason_code": "ENTITY_TYPE_MISMATCH", "customer_record_id": "CUS-000095", "rules": {"decision": "DIFFERENT_ENTITY", "reason_code": "ENTITY_TYPE_MISMATCH"}, "changed_by": null, "layers": {"score": "on", "briefing": "on", "reviewer": "off", "reader": "off"}, "people": [{"record_ids": ["CUS-000095"], "decision": "DIFFERENT_ENTITY", "reason_code": "ENTITY_TYPE_MISMATCH", "all_codes": ["ENTITY_TYPE_MISMATCH"], "customer": {"kind": "person", "verified_name": "Mark Baker", "verified_source": "KYC-000062", "names": ["Mark Baker"], "dob": "1980-01-01", "dob_source": "KYC-000062", "countries": [{"code": "IE", "name": "Ireland", "sources": ["CUS-000095", "KYC-000062"]}]}, "hit": {"kind": "company", "name": "Baker Mark Ltd", "aliases": [], "dobs": [], "dob_origin": null, "countries": [{"code": "IE", "name": "Ireland"}], "earliest_report": null, "death": null}, "states": {"name": "agree", "dob": "unknown", "location": "agree"}, "score": {"bits": -5.0, "band": "some evidence of a different one", "contributions": [{"field": "name", "state": "agree", "bits": 4.0, "detail": "2 parts match; fewer than 1 customer in 20 would share them by chance"}, {"field": "date of birth", "state": "unknown", "bits": 0.0, "detail": "The hit gives no date of birth"}, {"field": "country", "state": "agree", "bits": 3.0, "detail": "Ireland, shared by about 1 customer in 20"}, {"field": "entity type", "state": "mismatch", "bits": -12.0, "detail": "The customer is a person and the hit is a company"}], "conflict": false}, "briefing": {"headline": "Different: one is a person and the other a company.", "decided_by": ["The customer is a person but the hit is a company."], "missing": ["The hit gives no incorporation date."], "would_settle": [], "strength": "one ground, entity type", "caveats": []}, "review": null}]}
+{"hit_id": "H-00006A", "alert_id": "A-000069", "decision": "DIFFERENT_ENTITY", "reason_code": "DOB_MISMATCH", "customer_record_id": "CUS-000101", "rules": {"decision": "DIFFERENT_ENTITY", "reason_code": "DOB_MISMATCH"}, "changed_by": null, "layers": {"score": "on", "briefing": "on", "reviewer": "off", "reader": "off"}, "people": [{"record_ids": ["CUS-000101"], "decision": "DIFFERENT_ENTITY", "reason_code": "DOB_MISMATCH", "all_codes": ["DOB_MISMATCH"], "customer": {"kind": "person", "verified_name": "Tunde Bakare", "verified_source": "KYC-000068", "names": ["Tunde Bakare"], "dob": "1990-04-04", "dob_source": "KYC-000068", "countries": [{"code": "NG", "name": "Nigeria", "sources": ["CUS-000101", "KYC-000068"]}]}, "hit": {"kind": "person", "name": "Bakare, Tunde", "aliases": [], "dobs": ["1962", "1963"], "dob_origin": "search", "countries": [{"code": "NG", "name": "Nigeria"}], "earliest_report": null, "death": null}, "states": {"name": "agree", "dob": "mismatch", "location": "agree"}, "score": {"bits": -7.0, "band": "some evidence of a different one", "contributions": [{"field": "name", "state": "agree", "bits": 4.0, "detail": "2 parts match; fewer than 1 customer in 20 would share them by chance"}, {"field": "date of birth", "state": "mismatch", "bits": -14.0, "detail": "1990-04-04 against 1962, 1963: 27 years apart"}, {"field": "country", "state": "agree", "bits": 3.0, "detail": "Nigeria, shared by about 1 customer in 10"}], "conflict": false}, "briefing": {"headline": "Different person: born 27 years apart.", "decided_by": ["The customer's date of birth is 1990-04-04 (KYC-000068) but the hit's search results put its birth year at 1962 or 1963."], "missing": [], "would_settle": [], "strength": "one ground, from a verified identity check", "caveats": ["The hit's birth years come from a web search result (SR-00006C), not from the listing itself."]}, "review": null}]}
+</script>
 </body>
 </html>

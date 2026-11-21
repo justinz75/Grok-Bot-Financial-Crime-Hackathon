@@ -65,8 +65,8 @@ Each rule has its reason, so you can judge the cases it does not spell out.
 | `system/tests/` | Unit tests and whole-run tests. They need no data and every name in them is invented | owner |
 | `system/README.md` | The README the brief asks for: architecture, evidence, determinism, three cases, results | owner |
 | `output/dev.jsonl` | Our predictions on the development set, required by the brief. It must be what the current code produces | owner |
-| `tools/` | Checks that are not part of the scored system: stress test, layer comparison, country check | per task |
-| `viewer/` | A static page that displays decisions for the demo. It never decides | Teammate A |
+| `tools/` | Checks that are not part of the scored system: stress test, layer comparison, country check, the viewer's sample | per task |
+| `viewer/` | A static page that displays decisions for the demo. It never decides. Its built-in sample is written by `tools/make_viewer_sample.py`, never by hand | Teammate A, owner |
 | `docs/` | `explain-format.md`, the background in `context/`, and task outputs | per task |
 | `tasks/` | Handoffs and task briefs. The index is `tasks/README.md` | owner |
 | `research/` | UI and UX research for the viewer and the video | |
