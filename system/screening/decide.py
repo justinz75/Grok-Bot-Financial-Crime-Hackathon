@@ -23,9 +23,11 @@ class Customer(object):
 
     def __init__(self, kind, record_ids=(), verified_name=None, verified_source=None,
                  names=(), dob=None, dob_source=None, countries=None,
-                 unknown_countries=(), screened_at=None):
+                 unknown_countries=(), screened_at=None, primary=None, dob_can_clear=True):
         self.kind = kind
+        self.dob_can_clear = dob_can_clear        # False when an identity check could not be read
         self.record_ids = sorted(record_ids)
+        self.primary = primary or (self.record_ids[0] if self.record_ids else None)  # the record first found
         self.verified_name = verified_name        # legal name on the latest approved check
         self.verified_source = verified_source    # the KYC check or note it came from
         self.names = list(names)                  # declared names: (name, source id)
@@ -59,13 +61,17 @@ class Outcome(object):
     def __init__(self, decision, codes, sentences, evidence, record_id=None):
         self.decision = decision
         self.codes = list(codes)                  # every code that applies, main one first
-        self.reason = " ".join(sentences)
+        self.sentences = list(sentences)          # one sentence per decisive fact
         self.evidence = sorted(set(e for e in evidence if e))
         self.record_id = record_id
 
     @property
     def code(self):
         return self.codes[0]
+
+    @property
+    def reason(self):
+        return " ".join(self.sentences)
 
 
 def _cite(source):
@@ -90,10 +96,9 @@ def _hit_dob_claim(hit, company):
         return "profile notes %s %s" % ("give its date of birth as" if full else "put its birth year at", dates)
     if hit.dob_origin == "search":
         return "search results %s %s" % ("give its date of birth as" if full else "put its birth year at", dates)
-    noun = "incorporation date" if company else "date of birth"
     if len(hit.dobs) > 1:
-        return "listed %ss are %s" % (noun, dates)
-    return "listed %s is %s" % (noun, dates)
+        return "listed %s are %s" % ("incorporation dates" if company else "dates of birth", dates)
+    return "listed %s is %s" % ("incorporation date" if company else "date of birth", dates)
 
 
 def name_state(customer, hit, rules):
@@ -133,7 +138,7 @@ def location_state(customer, hit):
 def decide(customer, hit, rules):
     """Decide one hit against one resolved customer."""
     company = customer.kind == COMPANY
-    record_id = customer.record_ids[0] if customer.record_ids else None
+    record_id = customer.primary
 
     if customer.kind and hit.kind and customer.kind != hit.kind:
         sentence = "The customer is a %s but the hit is a %s." % (customer.kind, hit.kind)
@@ -144,9 +149,9 @@ def decide(customer, hit, rules):
     if hit.death and customer.screened_at and D.surely_before(hit.death, customer.screened_at):
         grounds["DECEASED"] = (
             "The hit's profile gives a date of death of %s, before the customer was screened on %s."
-            % (D.show(hit.death), D.show(customer.screened_at)), [])
+            % (D.show(hit.death), D.show(customer.screened_at)), ["%s#deceased_date" % hit.hit_id])
 
-    if hit.earliest_report and customer.dob:
+    if hit.earliest_report and customer.dob and customer.dob_can_clear:
         report = D.show(hit.earliest_report)
         if company:
             if D.surely_before(hit.earliest_report, customer.dob):
@@ -154,7 +159,9 @@ def decide(customer, hit, rules):
                     "The customer was incorporated on %s%s, after the hit's profile reports activity on %s."
                     % (D.show(customer.dob), _cite(customer.dob_source), report), [customer.dob_source])
         else:
-            age = D.max_age_on(customer.dob, hit.earliest_report)
+            # the oldest they can have been, from the birth year alone: never an
+            # overstatement of how young they were
+            age = hit.earliest_report.year - customer.dob.year
             if age < 0:
                 grounds["TEMPORAL_IMPOSSIBILITY"] = (
                     "The customer was born in %d%s, after the hit's profile reports activity on %s."
@@ -165,6 +172,8 @@ def decide(customer, hit, rules):
                     % (customer.dob.year, _cite(customer.dob_source), age, report), [customer.dob_source])
 
     dob = D.compare(customer.dob, hit.dobs)
+    if dob == "mismatch" and not customer.dob_can_clear:
+        dob = "unknown"
     if dob == "mismatch":
         subject = "The customer was incorporated on %s" if company else "The customer's date of birth is %s"
         grounds["DOB_MISMATCH"] = (
@@ -175,7 +184,7 @@ def decide(customer, hit, rules):
     if name == "mismatch":
         grounds["NAME_MISMATCH_VERIFIED"] = (
             "The customer's verified name is %s%s, which does not match the hit's name %s."
-            % (customer.verified_name, _cite(name_source), hit.name), [name_source])
+            % (customer.verified_name, _cite(name_source), hit.name.rstrip(".")), [name_source])
 
     location, shared = location_state(customer, hit)
     name_and_dob_agree = name == "agree" and dob == "agree"
@@ -200,9 +209,8 @@ def decide(customer, hit, rules):
     if location == "agree":
         sentences.append("Both the customer and the hit are linked to %s." % _country_names(shared))
         evidence += [s for code in shared for s in customer.countries[code]]
-    if name == "agree":
-        sentences.append("The customer's name agrees with the hit's name %s." % hit.name)
-        evidence.append(name_source)
+    if name == "agree":  # agreement on name is stated, not cited: it rests on no single record
+        sentences.append("The customer's name agrees with the hit's name %s." % hit.name.rstrip("."))
 
     if company and name == "agree" and location == "agree":
         return Outcome(SAME, ["NAME_LOCATION_MATCH"], sentences, evidence, record_id)
@@ -242,19 +250,11 @@ def combine(outcomes):
     if len(outcomes) == 1:
         return outcomes[0]
     evidence = [e for o in outcomes for e in o.evidence]
-    people = "%d different people in the system of record fit this alert." % len(outcomes)
     if len(set(o.decision for o in outcomes)) == 1:
         first = outcomes[0]
         shared_codes = [c for c in first.codes if all(c in o.codes for o in outcomes)]
-        return Outcome(first.decision, shared_codes or first.codes,
-                       [people, "Each leads to the same decision.", first.reason], evidence, AMBIGUOUS)
+        sentences = ["Each of them leads to the same decision."] + first.sentences[:2]
+        return Outcome(first.decision, shared_codes or first.codes, sentences, evidence, AMBIGUOUS)
     sentence = "They lead to different decisions (%s), so a person has to review it." % ", ".join(
         sorted(set(o.decision for o in outcomes)))
-    return Outcome(REVIEW, ["AMBIGUOUS_CUSTOMER_RECORD"], [people, sentence], evidence, AMBIGUOUS)
-
-
-def no_customer(hit):
-    """No record fits the alert at all."""
-    return Outcome(REVIEW, ["INSUFFICIENT_DATA"], [
-        "No record in the system of record fits the screened customer, so the hit %s cannot be compared with them."
-        % hit.name], [], None)
+    return Outcome(REVIEW, ["AMBIGUOUS_CUSTOMER_RECORD"], [sentence], evidence, AMBIGUOUS)

@@ -209,6 +209,16 @@ class Decisions(unittest.TestCase):
         o = decide(person("Tom Okafor", "2004"), hit("Thomas Okafor", earliest_report=d("2011-05-02")), R)
         self.assertEqual((o.decision, o.code), (DIFFERENT, "TEMPORAL_IMPOSSIBILITY"))
 
+    def test_too_young_is_judged_on_the_birth_year(self):
+        report = d("2020-06-01")
+        o = decide(person("Tom Okafor", "2005-12-31"), hit("Thomas Okafor", earliest_report=report), R)
+        self.assertEqual((o.decision, o.code), (DIFFERENT, "TEMPORAL_IMPOSSIBILITY"))
+        self.assertIn("at most 15", o.reason)
+        o = decide(person("Tom Okafor", "2004-12-31"), hit("Thomas Okafor", earliest_report=report), R)
+        self.assertEqual(o.decision, REVIEW)  # could have been 16 by the birth year: not cleared
+        unread = person("Tom Okafor", "2005-12-31", dob_can_clear=False)
+        self.assertEqual(decide(unread, hit("Thomas Okafor", earliest_report=report), R).decision, REVIEW)
+
     def test_country_difference_does_not_clear_name_and_dob(self):
         o = decide(person("Li Wei", "1975-03-02", ["SG"]), hit("Wei Li", "1975", ["CN"]), R)
         self.assertEqual((o.decision, o.code), (REVIEW, "INSUFFICIENT_DATA"))
