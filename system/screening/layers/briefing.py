@@ -85,6 +85,12 @@ def _usable_names(customer, rules, company):
     return best
 
 
+def _unread_listed(customer, hit):
+    """True when the customer's date may clear and the hit lists a date that could not be
+    read: the unread date, not the customer's, is why a contradiction did not clear."""
+    return bool(customer.dob_can_clear and (getattr(hit, "unread_dobs", None) or []))
+
+
 class Briefing(object):
     def annotate(self, case):
         try:
@@ -164,6 +170,8 @@ class Briefing(object):
                 lead = "name and country agree" if st["location"] == "agree" else "the name agrees"
                 if not customer.dob or not hit.dobs:
                     return "Needs a person: %s, but there is no date of birth to compare." % lead
+                if raw_dob == "mismatch" and _unread_listed(customer, hit):
+                    return "Needs a person: %s, but one of the hit's listed dates of birth could not be read." % lead
                 if raw_dob == "mismatch":
                     if hit.dob_context_uncertain:
                         return "Needs a person: %s, but the listing's birth date is not clearly about the listed person." % lead
@@ -232,9 +240,18 @@ class Briefing(object):
             sentence = "The hit location \"%s\" could not be read." % str(raw).strip()
             if sentence not in out:
                 out.append(sentence)
+        for raw in getattr(hit, "unread_dobs", None) or []:
+            sentence = "The hit date \"%s\" could not be read." % str(raw).strip()
+            if sentence not in out:
+                out.append(sentence)
         if not company and _usable_names(customer, rules, company) < 2:
             out.append("The customer's name has fewer than two real parts, so it can neither confirm nor clear the hit.")
-        if has_record and not (customer.dob_can_clear and customer.name_can_clear):
+        # a date that no record carries: it came from the alert, and that is why it cannot clear
+        alert_only = has_record and customer.dob is not None and customer.dob_source is None
+        if alert_only:
+            out.append("The customer's %s is one only the alert gives: no record backs it, so it can support "
+                       "a match but cannot clear one." % w["date"])
+        if has_record and not (customer.name_can_clear and (customer.dob_can_clear or alert_only)):
             out.append("An identity check on file could not be read with confidence, so what it says can "
                        "support a match but cannot clear one.")
         return out
@@ -277,6 +294,12 @@ class Briefing(object):
             elif not customer.dob and not hit.dobs:
                 out.append("A %s for both the customer and the %s would settle it: neither has one, so the "
                            "two cannot be compared." % (date, listed))
+            elif raw_dob == "mismatch" and _unread_listed(customer, hit):
+                out.append("Reading the hit's date written as %s would settle it: the customer's %s (%s) "
+                           "contradicts the dates that could be read (%s), and the unread one may be the date "
+                           "that agrees."
+                           % (_join(["\"%s\"" % str(u).strip() for u in hit.unread_dobs], "and"), date,
+                              D.show(customer.dob), _join([D.show(d) for d in hit.dobs], "or")))
             elif raw_dob == "mismatch":
                 if hit.dob_context_uncertain:
                     out.append("A birth date explicitly attached to the listed person would settle the date comparison; "

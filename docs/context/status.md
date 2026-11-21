@@ -1,12 +1,23 @@
 # Where things stand
 
-## Section 3.2 candidate: DOB-context hardening
+## Combined DOB and unreadable-value safeguards
+
+PR #7 integrates Justin's unreadable-value work over `32a40a4`, the merge of
+the DOB-context safeguards in PR #10. Both safeguards are retained when
+deciding whether a birth date or a country difference can clear a hit.
+
+The combined candidate passed 296 system tests and 28 tools tests. The official
+validator accepted all 819 predictions with 50 of 50 correct practice decisions
+and zero unsafe clearances. The totals were 463 `DIFFERENT_ENTITY`, 231
+`REVIEW` and 125 `SAME_ENTITY`. Scored output matched `32a40a4` byte for byte.
+Strict five-run reproducibility passed for scored and explain output, and the
+viewer sample was up to date.
+
+## Section 3.2 baseline: DOB-context hardening
 
 Validated on `task/handoff-loop`, based on `94b96fc`, at 15:58 London on
-21 November 2026. This candidate is first in the runtime integration order, before
-the overlapping unreadable-value work. It is proposed through a PR; this task does
-not merge or push to `main`. The older snapshot below remains historical evidence.
-The final release task must refresh the README and combined release figures after integration.
+21 November 2026. PR #10 merged this change ahead of the unreadable-value work.
+The figures in this section were measured before the two changes were combined.
 
 `d9b5f72` was absent from fetched branches and PR refs, so the change was
 reconstructed. No existing test was deleted. The wider DOB readings can still

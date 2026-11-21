@@ -110,4 +110,5 @@ def build_hit(row, store):
     reports = X.dated_reports(notes)
     return Hit(hit_id, kind, name, aliases, dobs, origin, used, countries, unknown,
                reports[0] if reports else None, D.parse_date(row.get("deceased_date")),
-               clearance_dobs, clearance_sources, blocking_dobs, context_uncertain)
+               clearance_dobs, clearance_sources, blocking_dobs, context_uncertain,
+               unread_dobs=D.unread_dates(row.get("dobs")))

@@ -63,12 +63,18 @@ separate explain file, and cannot create a clearance.
    the note can be believed: outside the identity-check channel it must name a document, its
    legal name must share a part with a name the bank holds for the customer, and a person's date
    of birth must fall at least 14 years before the note. Otherwise what it says may support a
-   match and never clears one. A doubtful support note supplies the latest check only when
-   there is no other kind of check.
+   match and never clears one. A doubtful support note read that way never stands in front of another
+   check: it is the latest check only when it is the only kind there is. Where the verified
+   date of birth cannot be read at all, or a note in the identity-check channel reads as a
+   failed check, the declared date of birth may agree with a hit and never clears one: a check
+   that passed can read as failed when it gives the document's expiry date. A date of birth
+   that only the alert gives is treated the same way.
 5. **Countries.** Take residence and nationality from every customer record and the document
    country from the latest approved check. Explicit travel-only mentions and superseded documents
    can block a location clearance when the hit is linked to that country. Other country mentions
    without a residence tie can also block a clearance when the hit is linked to that country.
+   A country named in an identity-check note that reads as a failed check also blocks a
+   location clearance.
 6. **Several people fit.** Each is decided separately. One shared decision is given; different
    decisions become `REVIEW` with `AMBIGUOUS_CUSTOMER_RECORD`. The customer is `AMBIGUOUS` either way.
 
@@ -83,6 +89,17 @@ A hit's date of birth is taken from the first place that has one:
    must describe the same kind of listing (from the hit's primary category) in a country tied
    to the hit. Dates recovered by widening the search or reading wrapped text can support a
    match, while a clearance on birth date still requires the original evidence to contradict it.
+
+Birth dates and ages taken from prose can support a clearance only when the wording
+explicitly ties them to the listed person. A date about a relative or a number describing
+a fine, count or duration cannot establish a birth-date contradiction. An uncertain
+reading can also block a country clearance when a search result may give an agreeing date.
+
+A date in the `dobs` field that cannot be read is kept as unknown, not dropped. The dates that
+could be read may still agree with the customer's, but they may not clear the hit, and neither
+may a date from the notes or the search results: the unread date may be the one that agrees.
+The one exception is a year no date here can have, such as 1340 from another calendar, which
+takes no part.
 
 Countries come from `countries`, `nationality`, `citizenship`, the last part of each address and
 the place of birth. Dated reports are only the English lines of the form
@@ -219,9 +236,9 @@ this changes a decision; all of it is what an analyst would want to know.
 
 A bank that lets software clear alerts also has to order the open work, have a second person
 check the clearances, test the name matching and record what was run. `tools/assure.py` does
-that from one run and changes no decision. On the development set, 175 of the 440 alerts close
-with nobody opening them, 122 of the 464 clearances are picked for a second reader (73 for a
-risk flag and 49 by a fixed sample), and 187 of the 230 reviews wait for one fact: the listed
+that from one run and changes no decision. In the historical assurance run, 175 of the 440
+development alerts closed without opening them, and 122 of the 464 clearances were picked for a second reader (73 for a
+risk flag and 49 by a fixed sample). In that run, 187 of the 230 reviews waited for one fact: the listed
 person's date of birth. The tables, and what is still missing, are in
 [docs/assurance.md](../docs/assurance.md).
 
@@ -262,6 +279,13 @@ Evidence: `CUS-783545`, `KYC-80B445`.
   clear one.
 - **Unknown countries.** A country string we cannot resolve blocks a location clearance instead
   of being ignored.
+- **Unreadable dates.** A date a hit lists that cannot be read, and a verified date of birth
+  that cannot be read, are unknown and not absent: what could be read may agree with the other
+  side and may not clear. Where the name agrees and the other side gives a date, a country
+  difference does not clear either, because the unread date may be the one that agrees.
+- **A truly rejected check written as a note costs a clearance.** The rules cannot tell it from
+  a check that passed and mentions an expiry date. After either, the declared date of birth may
+  agree with a hit and may not clear one.
 - **A doubtful note in the identity-check channel still stands in front of an earlier check.**
   It is a real check read with doubt, so it stays the latest one and cannot clear a hit; a hit
   the earlier check would have decided then goes to review, or to a match when the declared
@@ -274,9 +298,10 @@ Evidence: `CUS-783545`, `KYC-80B445`.
   real model: there was no API key when this was written. They stay off until
   `tools/ablate.py --runs 5` shows a real model is stable and creates no clearance.
 - **Date of death** is read from the hit's field only, not from prose.
-- **A date the system cannot read is treated as missing.** A birth year from another calendar,
-  such as 1340 or 1402, is not read as a date of birth. Every date field in the development set
-  is readable, so this has not mattered there.
+- **A birth year from another calendar is treated as missing.** A year such as 1340 or 1402 is
+  not read as a date of birth and takes no part in a decision: it cannot agree with a date the
+  bank holds. Any other listed date that cannot be read is kept as unknown, as above. Every date
+  field in the development set is readable, so neither has mattered there.
 - **Name particles count as name parts.** Two unrelated names that share "al" and one other
   part agree under the two-part rule. On the public list this confirmed a handful of unrelated
   names that were given the listed person's date of birth.
@@ -299,6 +324,7 @@ python -m unittest discover -s system/tests
 | `test_country_clearances.py` | 7 cases on country evidence: the latest approved document, a superseded one, a territory against its parent country, a residence in a note, a holiday |
 | `test_decision_evidence.py` | 6 cases checking that the scored reason and the cited records describe the same facts, for one customer and for several candidates |
 | `test_wording.py` | 15 whole-run cases of text that can be misread: capitals that are not the legal name, a year that is not a birth date, a country written as a nationality. None may clear a hit, and the controls check that a real check still does |
+| `test_unreadable.py` | 39 cases of a value that cannot be read or that no record backs: one of a hit's listed dates, the date of birth on an approved check, an approved check that reads as a failed one, a date of birth only the alert gives. None may clear a hit, and the controls check that what can be read still does. Integration cases preserve the original DOB clearance baseline, weak-country caution and unread-date explanations for multiple candidates |
 | `test_layers.py` | The three layer guarantees |
 | `test_layer_*.py` | Each layer on its own |
 
