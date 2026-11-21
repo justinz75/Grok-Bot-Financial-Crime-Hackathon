@@ -11,6 +11,13 @@ git log --oneline origin/main     # what is on main
 git branch -r                     # which task branches have been pushed
 ```
 
+Tests-only follow-up to handoff section 3.4, based on `main` at `94b96fc`:
+`python -m unittest discover -s system/tests` prints `Ran 245 tests`, `OK` with the
+invented cases in `test_unlabelled_codes.py` and `test_unlabelled_ambiguity.py`.
+They cover type mismatches, death-date boundaries, conflicting candidate decisions and
+unanimous candidates. No decision code or committed predictions change. The historical
+snapshot and measurements below still describe their stated commits.
+
 If you change the state of a task, update this page in the same pull request.
 
 The `task/screening-improvements` draft includes the follow-up fixes from the PR #5 review.
