@@ -6,6 +6,8 @@ the same person, and builds one picture of them: declared names, the verified le
 name and date of birth from the latest approved identity check, and every country
 tied to them. Each fact keeps the ID of the record it came from.
 """
+import re
+
 from . import countries as C
 from . import dates as D
 from . import extract as X
@@ -14,10 +16,6 @@ from .store import key, text
 from .textutil import fold
 
 APPROVED = frozenset("approved passed pass clear cleared verified accepted success successful".split())
-# The policy ties a customer to "the approved identity document": the latest approved
-# check. An earlier approved document can only add a country, which can only stop a
-# clearance, so its country is tied too when no other record already gives it.
-ALL_APPROVED_DOCUMENTS = True
 # The policy lists the screened city among the details a record must fit.
 CITY_REQUIRED = True
 # The rules read a check written as a note by its shape: the longest run of capitals is
@@ -32,6 +30,26 @@ DOUBTFUL_NOTES_NEVER_CLEAR = True
 MENTIONED_COUNTRIES_BLOCK = True
 NAME_FIELDS = ("full_name", "preferred_name", "login_name")
 COUNTRY_FIELDS = ("residence_country", "nationality")
+_SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+|\n+")
+_TRAVEL_SENTENCE = re.compile(
+    r"(?:the )?(?:customer|client) (?:only )?"
+    r"(?:visited|travelled to|traveled to|went on (?:a )?holiday to) "
+    r"(?P<place>[\w .’'&,-]+?)(?: for (?:a |the )?(?:short )?(?:holiday|vacation|visit|trip))?[.!?]?",
+    re.IGNORECASE,
+)
+
+
+def _travel_only_countries(body):
+    """Find countries mentioned only in clear, standalone travel statements."""
+    travel, other = set(), []
+    for sentence in _SENTENCE_BREAK.split(body):
+        match = _TRAVEL_SENTENCE.fullmatch(sentence.strip())
+        code = C.resolve(match["place"]) if match else None
+        if code not in (None, C.IGNORED) and C.find_in_text(sentence) == [code]:
+            travel.add(code)
+        else:
+            other.append(sentence)
+    return travel.difference(C.find_in_text(" ".join(other))) if travel else travel
 
 
 def kind_of(value):
@@ -266,6 +284,7 @@ class Resolver(object):
         store = self.store
         kind = self.features(first)[4] or screened.kind
         names, countries, unknown = [], {}, []
+        precautionary = {}
         # the names the bank holds for this person: every record's, and the screened one
         held = [parts for rid in group for parts in self.features(rid)[0]]
         if screened.parts:
@@ -308,10 +327,12 @@ class Resolver(object):
                     mentioned.append((note_id, body))
                 if got is None:
                     unread_check = unread_check or looks_like_check
-                    # a place the notes say they lived; for a check that could not be
-                    # read, the document's country in whatever form it is written
+                    travel = _travel_only_countries(body) if not looks_like_check else ()
+                    for code in travel:
+                        precautionary.setdefault(code, []).append(note_id)
                     for code in C.find_in_text(body, demonyms=looks_like_check):
-                        tie(code, note_id)
+                        if code not in travel:
+                            tie(code, note_id)
                 elif got["approved"]:
                     if got.get("dob") is None:
                         # the check was found but its date of birth was not: the declared
@@ -348,10 +369,10 @@ class Resolver(object):
                 tie(code, latest[1])
             if latest[5]:
                 unknown.append(latest[5])
-            for check in (checks if ALL_APPROVED_DOCUMENTS else []):
-                for code in check[4]:
-                    if code not in countries:
-                        tie(code, check[1])
+            for check in checks:
+                if check is not latest:
+                    for code in check[4]:
+                        precautionary.setdefault(code, []).append(check[1])
         if dob is None:
             for rid in [first] + [r for r in group if r != first]:
                 declared = D.parse_date(store.customer[rid].get("dob"))
@@ -372,7 +393,9 @@ class Resolver(object):
                     possible[code].append(note_id)
         return Customer(kind, group, verified_name, verified_source, names, dob, dob_source,
                         countries, unknown, screened.at, primary=first, dob_can_clear=dob_can_clear,
-                        name_can_clear=soft_source is None, possible_countries=possible)
+                        name_can_clear=soft_source is None, possible_countries=possible,
+                        precautionary_countries={code: sources for code, sources in precautionary.items()
+                                                 if code not in countries})
 
     def screened_only(self, screened):
         """No record fits: the screened details are all there is. They are declared,

@@ -24,7 +24,8 @@ class Customer(object):
     def __init__(self, kind, record_ids=(), verified_name=None, verified_source=None,
                  names=(), dob=None, dob_source=None, countries=None,
                  unknown_countries=(), screened_at=None, primary=None, dob_can_clear=True,
-                 confirmable=True, name_can_clear=True, possible_countries=None):
+                 confirmable=True, name_can_clear=True, possible_countries=None,
+                 precautionary_countries=None):
         self.kind = kind
         self.dob_can_clear = dob_can_clear        # False when an identity check could not be read
         self.confirmable = confirmable            # False when no customer record was found
@@ -39,6 +40,7 @@ class Customer(object):
         self.dob_source = dob_source
         self.countries = dict(countries or {})    # code -> source ids
         self.unknown_countries = list(unknown_countries)
+        self.precautionary_countries = dict(precautionary_countries or {})  # code -> source IDs
         self.screened_at = screened_at
 
 
@@ -47,14 +49,17 @@ class Hit(object):
 
     def __init__(self, hit_id, kind, name, aliases=(), dobs=(), dob_origin=None,
                  dob_evidence=(), countries=(), unknown_countries=(),
-                 earliest_report=None, death=None):
+                 earliest_report=None, death=None, clearance_dobs=None, clearance_dob_evidence=()):
         self.hit_id = hit_id
         self.kind = kind
         self.name = name
         self.names = [name] + [a for a in aliases if a]
         self.dobs = list(dobs)
         self.dob_origin = dob_origin              # 'listed', 'notes' or 'search'
-        self.dob_evidence = list(dob_evidence)    # search result IDs, when from search
+        self.dob_evidence = list(dob_evidence)
+        # Dates available before the recovery expansion define the clearance baseline.
+        self.clearance_dobs = self.dobs if clearance_dobs is None else list(clearance_dobs)
+        self.clearance_dob_evidence = [source for source in clearance_dob_evidence if source]
         self.countries = set(countries)
         self.unknown_countries = list(unknown_countries)
         self.earliest_report = earliest_report
@@ -62,12 +67,14 @@ class Hit(object):
 
 
 class Outcome(object):
-    def __init__(self, decision, codes, sentences, evidence, record_id=None):
+    def __init__(self, decision, codes, sentences, evidence, record_id=None, grounds=None, candidate_fact=None):
         self.decision = decision
         self.codes = list(codes)                  # every code that applies, main one first
         self.sentences = list(sentences)          # one sentence per decisive fact
         self.evidence = sorted(set(e for e in evidence if e))
         self.record_id = record_id
+        self._grounds = grounds
+        self.candidate_fact = candidate_fact
 
     @property
     def code(self):
@@ -76,6 +83,19 @@ class Outcome(object):
     @property
     def reason(self):
         return " ".join(self.sentences)
+
+    def scored_facts(self, code=None):
+        """Return the text and citations together, reserving one sentence for resolution.
+
+        A candidate in a unanimous clearance needs just one contradiction. The
+        full set of facts remains available to the optional layers.
+        """
+        if not self._grounds:
+            return self.sentences[:3], self.evidence
+        selected = [code] if code else self.codes[:3]
+        facts = [self._grounds[c] for c in selected]
+        evidence = sorted({source for _, sources in facts for source in sources if source})
+        return [sentence for sentence, _ in facts], evidence
 
 
 def _cite(source):
@@ -156,9 +176,18 @@ def location_state(customer, hit):
         return "agree", shared
     if not customer.countries or not hit.countries:
         return "unknown", shared
-    if customer.unknown_countries or hit.unknown_countries:
+    if (customer.unknown_countries or hit.unknown_countries
+            or hit.countries.intersection(customer.precautionary_countries)):
         return "unknown", shared
     return "mismatch", shared
+
+
+def _dob_state(customer, hit):
+    dob = D.compare(customer.dob, hit.dobs)
+    clearance_dob = D.compare(customer.dob, hit.clearance_dobs)
+    if dob == "mismatch" and (not customer.dob_can_clear or clearance_dob != "mismatch"):
+        dob = "unknown"
+    return dob, clearance_dob
 
 
 def _location(customer, hit, name, dob):
@@ -176,9 +205,7 @@ def states(customer, hit, rules):
     """The three comparisons behind every decision, exactly as decide() makes them:
     name, dob and location are each 'agree', 'mismatch' or 'unknown'."""
     name, name_source = name_state(customer, hit, rules)
-    dob = D.compare(customer.dob, hit.dobs)
-    if dob == "mismatch" and not customer.dob_can_clear:
-        dob = "unknown"
+    dob, _ = _dob_state(customer, hit)
     location, shared = _location(customer, hit, name, dob)
     return {"name": name, "name_source": name_source, "dob": dob, "location": location, "shared": sorted(shared)}
 
@@ -219,14 +246,17 @@ def decide(customer, hit, rules):
                     "The customer was born in %d%s, so they were at most %d when the hit's profile reports activity on %s."
                     % (customer.dob.year, _cite(customer.dob_source), age, report), [customer.dob_source])
 
-    dob = D.compare(customer.dob, hit.dobs)
-    if dob == "mismatch" and not customer.dob_can_clear:
-        dob = "unknown"
+    dob, clearance_dob = _dob_state(customer, hit)
     if dob == "mismatch":
         subject = "The customer was incorporated on %s" if company else "The customer's date of birth is %s"
-        grounds["DOB_MISMATCH"] = (
-            (subject + "%s but the hit's %s.") % (D.show(customer.dob), _cite(customer.dob_source), _hit_dob_claim(hit, company)),
-            [customer.dob_source] + hit.dob_evidence)
+        claim = (subject + "%s but the hit's %s") % (
+            D.show(customer.dob), _cite(customer.dob_source), _hit_dob_claim(hit, company))
+        baseline_sources = sorted(set(hit.clearance_dob_evidence) - set(hit.dob_evidence))
+        if baseline_sources:
+            dates = ", ".join(D.show(date) for date in hit.clearance_dobs)
+            claim += ", and the original search results (%s) also give a conflicting date (%s)" % (
+                ", ".join(baseline_sources), dates)
+        grounds["DOB_MISMATCH"] = (claim + ".", [customer.dob_source] + hit.dob_evidence + baseline_sources)
 
     name, name_source = name_state(customer, hit, rules)
     if name == "mismatch":
@@ -238,10 +268,20 @@ def decide(customer, hit, rules):
     # a note mentions one of the hit's countries, and that alone is why the difference does not clear
     mentioned = mentioned_ties(customer, hit) if location != location_state(customer, hit)[0] else []
     name_and_dob_agree = name == "agree" and dob == "agree"
-    # A name with fewer than two real parts cannot confirm or clear, but it can agree. With
-    # the date of birth agreeing too, a country difference does not clear the hit.
-    short_agree = name == "unknown" and dob == "agree" and short_name_agrees(customer, hit, rules)
-    if location == "mismatch" and not name_and_dob_agree and not short_agree:
+    # Weak geographic evidence can block a clearance without establishing
+    # agreement when all countries established by the policy differ.
+    precautions = hit.countries.intersection(customer.precautionary_countries)
+    disjoint_with_precaution = (
+        location == "unknown" and precautions
+        and not customer.unknown_countries and not hit.unknown_countries
+        and customer.countries
+    )
+    # A one-part name can stop a location clearance when either DOB comparison agrees.
+    short_name_match = (name == "unknown" and "agree" in (dob, clearance_dob)
+                        and short_name_agrees(customer, hit, rules))
+    short_agree = short_name_match and dob == "agree"
+    baseline_agreement = (name == "agree" or short_name_match) and clearance_dob == "agree"
+    if location == "mismatch" and not (name_and_dob_agree or short_agree or baseline_agreement):
         sources = [s for ids in customer.countries.values() for s in ids]
         grounds["LOCATION_MISMATCH"] = (
             "The customer is linked only to %s but the hit is linked only to %s."
@@ -250,50 +290,80 @@ def decide(customer, hit, rules):
     if grounds:
         codes = [c for c in CLEARING_ORDER if c in grounds]
         evidence = [e for c in codes for e in grounds[c][1]]
-        return Outcome(DIFFERENT, codes, [grounds[c][0] for c in codes], evidence, record_id)
+        return Outcome(DIFFERENT, codes, [grounds[c][0] for c in codes], evidence, record_id, grounds)
 
     # No contradiction: confirm on agreement, otherwise review.
     sentences, evidence = [], []
+    dob_sources = [customer.dob_source] + hit.dob_evidence
+    country_sources = [s for code in shared for s in customer.countries[code]]
     if dob == "agree":
         subject = "The customer's incorporation date %s%s" if company else "The customer's date of birth %s%s"
         sentences.append((subject + " agrees with the hit's %s.")
                          % (D.show(customer.dob), _cite(customer.dob_source), _hit_dates_text(hit)))
-        evidence += [customer.dob_source] + hit.dob_evidence
+        evidence += dob_sources
     if location == "agree":
         sentences.append("Both the customer and the hit are linked to %s." % _country_names(shared))
-        evidence += [s for code in shared for s in customer.countries[code]]
+        evidence += country_sources
     if name == "agree":  # agreement on name is stated, not cited: it rests on no single record
         sentences.append("The customer's name agrees with the hit's name %s." % hit.name.rstrip("."))
-    elif short_agree and location == "mismatch":
+    elif short_name_match and location == "mismatch":
         sentences.append("The customer's name has fewer than two real parts, so it can neither confirm nor clear "
                          "the hit, but what there is of it agrees with the hit's name %s." % hit.name.rstrip("."))
 
     if customer.confirmable:
         if company and name == "agree" and location == "agree":
-            return Outcome(SAME, ["NAME_LOCATION_MATCH"], sentences, evidence, record_id)
-        if not company and name_and_dob_agree and location != "mismatch":
+            fact = ("The name matches and both are linked to %s." % _country_names(shared), country_sources)
+            return Outcome(SAME, ["NAME_LOCATION_MATCH"], sentences, evidence, record_id, candidate_fact=fact)
+        if not company and name_and_dob_agree and location != "mismatch" and not disjoint_with_precaution:
             codes = ["NAME_DOB_MATCH"]
             if location == "agree":
                 codes.append("NAME_DOB_LOCATION_MATCH")
-            return Outcome(SAME, codes, sentences, evidence, record_id)
+            fact = ("The name matches and birth dates agree (%s and %s)%s."
+                    % (D.show(customer.dob), _hit_dates_text(hit), _cite(customer.dob_source)), dob_sources)
+            return Outcome(SAME, codes, sentences, evidence, record_id, candidate_fact=fact)
 
+    review_fact, review_sources = None, []
+    country_ties = [s for ids in customer.countries.values() for s in ids]
     if not customer.confirmable:
         sentences = sentences[:2] + [
             "The screened details are unverified and belong to no known record, so they can "
             "neither clear nor confirm the hit and a person has to review it."]
-    elif location == "mismatch":  # name and date of birth agree, the countries do not
+    elif disjoint_with_precaution:
+        notes = sorted({s for code in precautions for s in customer.precautionary_countries[code] if s})
+        sources = " (%s)" % ", ".join(notes) if notes else ""
         sentences.append(
-            "Every country tied to the customer (%s) differs from every country tied to the hit (%s), "
-            "and a country difference does not clear a hit whose name and date of birth agree, "
-            "so a person has to review it."
-            % (_country_names(customer.countries), _country_names(hit.countries)))
-        evidence += [s for ids in customer.countries.values() for s in ids]
+            "The customer's established countries (%s) differ from the hit's (%s), but an earlier approved "
+            "check or travel note%s mentions %s for the customer, so a person has to review the hit."
+            % (_country_names(customer.countries), _country_names(hit.countries), sources, _country_names(precautions)))
+        review_sources = country_ties + notes
+    elif location == "mismatch":
+        review_sources = country_ties
+        if name_and_dob_agree or short_agree:
+            sentences.append(
+                "Every country tied to the customer (%s) differs from every country tied to the hit (%s), "
+                "and a country difference does not clear a hit whose name and date of birth agree, "
+                "so a person has to review it."
+                % (_country_names(customer.countries), _country_names(hit.countries)))
+        else:
+            baseline_dates = ", ".join(D.show(date) for date in hit.clearance_dobs)
+            baseline_sources = sorted(set(hit.clearance_dob_evidence) - set(hit.dob_evidence))
+            if hit.dobs and baseline_sources:
+                sentences.append(
+                    "The names agree, but the customer's birth date agrees with the original search results "
+                    "(%s, %s) while the hit's %s, so the country difference still requires review."
+                    % (", ".join(baseline_sources), baseline_dates, _hit_dob_claim(hit, company)))
+            else:
+                sentences.append(
+                    "The customer's name agrees with the hit, but the birth-date sources give different results "
+                    "and their countries differ, so a person has to review it.")
+            review_sources = country_ties + dob_sources + hit.clearance_dob_evidence
     else:
         if mentioned:
             notes = sorted(set(s for code in mentioned for s in customer.possible_countries[code]))
-            sentences.append("A note about the customer (%s) mentions %s, a country tied to the hit, "
-                             "so the countries cannot be said to differ." % (", ".join(notes), _country_names(mentioned)))
-            evidence += notes
+            review_fact = ("A note about the customer (%s) mentions %s, a country tied to the hit, "
+                           "so the countries cannot be said to differ." % (", ".join(notes), _country_names(mentioned)))
+            sentences.append(review_fact)
+            review_sources = notes
         missing = []
         if name != "agree":
             missing.append("the name cannot be matched to the hit")
@@ -305,9 +375,51 @@ def decide(customer, hit, rules):
         sentences.append(
             "Nothing in the customer's records contradicts the hit, and %s, "
             "so the hit can be neither cleared nor confirmed." % " and ".join(missing))
+    evidence += review_sources
     if not evidence:
         evidence = list(customer.record_ids)
-    return Outcome(REVIEW, ["INSUFFICIENT_DATA"], sentences, evidence, record_id)
+    return Outcome(REVIEW, ["INSUFFICIENT_DATA"], sentences, evidence, record_id,
+                   candidate_fact=(review_fact or sentences[-1], review_sources or customer.record_ids))
+
+
+def _candidate_facts(outcomes, codes, budget):
+    """Select one decision-bearing fact per candidate and group identical facts."""
+    by_fact = {}
+    evidence = []
+    for outcome, code in zip(outcomes, codes):
+        if outcome.candidate_fact:
+            sentence, sources = outcome.candidate_fact
+        else:
+            sentences, sources = outcome.scored_facts(code)
+            sentence = sentences[0]
+        by_fact.setdefault(sentence, []).append(outcome.record_id)
+        evidence.extend(sources)
+
+    clauses = []
+    for sentence, records in by_fact.items():
+        known = [record for record in records if record]
+        if known:
+            label = "record" if len(known) == 1 else "records"
+            scope = "%s %s" % (label, ", ".join(known))
+            if len(known) != len(records):
+                scope += " and the unverified details"
+        else:
+            scope = "the unverified details"
+        # The reasons start with ordinary determiners. Preserve any proper name or acronym.
+        first, _, rest = sentence.rstrip(".").partition(" ")
+        if first in {"A", "An", "Both", "Every", "Nothing", "The"}:
+            first = first.lower()
+        clauses.append("for %s, %s" % (scope, " ".join(filter(None, (first, rest)))))
+
+    # Keep the sentences similar in length when there are more distinct facts than slots.
+    sentences = []
+    slots = min(len(clauses), budget)
+    for slot in range(slots):
+        start = slot * len(clauses) // slots
+        end = (slot + 1) * len(clauses) // slots
+        sentence = ", while ".join(clauses[start:end])
+        sentences.append(sentence[0].upper() + sentence[1:] + ".")
+    return sentences, evidence
 
 
 def combine(outcomes):
@@ -315,12 +427,24 @@ def combine(outcomes):
     REVIEW with AMBIGUOUS_CUSTOMER_RECORD. Either way the customer is AMBIGUOUS."""
     if len(outcomes) == 1:
         return outcomes[0]
+    # Each candidate is decided alone, and the hit cites everything any of them cites. The
+    # practice labels do the same: for a hit two people fit, the reference lists the identity
+    # checks behind each one's facts as well as their records.
     evidence = [e for o in outcomes for e in o.evidence]
-    if len(set(o.decision for o in outcomes)) == 1:
+    decisions = sorted({o.decision for o in outcomes})
+    if len(decisions) == 1:
         first = outcomes[0]
         shared_codes = [c for c in first.codes if all(c in o.codes for o in outcomes)]
-        sentences = ["Each of them leads to the same decision."] + first.sentences[:2]
-        return Outcome(first.decision, shared_codes or first.codes, sentences, evidence, AMBIGUOUS)
-    sentence = "They lead to different decisions (%s), so a person has to review it." % ", ".join(
-        sorted(set(o.decision for o in outcomes)))
-    return Outcome(REVIEW, ["AMBIGUOUS_CUSTOMER_RECORD"], [sentence], evidence, AMBIGUOUS)
+        codes = shared_codes or first.codes
+        if first.decision != DIFFERENT and all(o.sentences == first.sentences for o in outcomes):
+            # the same facts hold for every candidate: state them once, as for one customer
+            return Outcome(first.decision, codes, first.sentences, evidence, AMBIGUOUS)
+        selected = [None] * len(outcomes)
+        if first.decision == DIFFERENT:
+            selected = [shared_codes[0] if shared_codes else o.code for o in outcomes]
+        details, _ = _candidate_facts(outcomes, selected, budget=3)
+        return Outcome(first.decision, codes, details, evidence, AMBIGUOUS)
+    summary = "The candidates lead to different decisions (%s), so a person has to review the hit." % ", ".join(decisions)
+    details, _ = _candidate_facts(outcomes, [o.code if o.decision == DIFFERENT else None
+                                             for o in outcomes], budget=2)
+    return Outcome(REVIEW, ["AMBIGUOUS_CUSTOMER_RECORD"], [summary] + details, evidence, AMBIGUOUS)

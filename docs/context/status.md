@@ -13,6 +13,13 @@ git branch -r                     # which task branches have been pushed
 
 If you change the state of a task, update this page in the same pull request.
 
+The `task/screening-improvements` draft includes the follow-up fixes from the PR #5 review.
+The screening unit suite passed 233 tests and the official validator accepted all 819 development
+predictions, with 50 right decisions on the practice labels. Compared with the checked-in predictions on
+`main` at `e120f22`, no verdict, reason code or customer record changed. The longest ambiguous
+reason on the draft dropped from 1555 to 941 characters, and all ambiguous reasons fit the
+four-sentence budget.
+
 ## Numbers to expect
 
 The tests, the run, the validator, the practice-label score, the five-run check and the stress

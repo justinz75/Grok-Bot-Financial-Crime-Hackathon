@@ -69,5 +69,7 @@ in [context/decisions.md](context/decisions.md), section 3.
 | A country a support note only mentions blocks a clearance against that country | `decide.py`: `mentioned_ties` | `test_wording.py`: `test_a_nationality_word_in_a_support_note` |
 | A country string that cannot be resolved blocks a location clearance | `decide.py`: `location_state` | `test_rules.py`: `test_unreadable_country_blocks_location_clearance` |
 | A numeric date that reads two ways clears only when both readings contradict | `dates.py`: `contradicts` | `test_ambiguous_dates.py`: `test_contradicted_only_when_both_readings_are` |
+| A date of birth found only by the wider reading of the profile or the search results never clears | `decide.py`: `_dob_state` | `test_watchlist_dob_recovery.py`: `test_recovered_conflicting_dob_does_not_clear_a_review`, `test_new_profile_dob_cannot_remove_the_location_exception` |
+| A superseded document's country, or a place only travelled to, blocks a clearance and confirms nothing | `resolve.py`: `_travel_only_countries` | `test_country_clearances.py`: `test_superseded_document_cannot_confirm_country`, `test_travel_is_not_country_agreement_for_company` |
 | With no customer record, the screened details neither clear nor confirm | `resolve.py`: `screened_only` | `test_pipeline.py`: `test_08_no_record_fits` |
 | A hit the system fails on is written as a review, never dropped | `pipeline.py`: `_unprocessed` | `test_pipeline.py`: `test_25_a_hit_whose_alert_is_missing_goes_to_review` |

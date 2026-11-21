@@ -63,12 +63,12 @@ separate explain file, and cannot create a clearance.
    the note can be believed: outside the identity-check channel it must name a document, its
    legal name must share a part with a name the bank holds for the customer, and a person's date
    of birth must fall at least 14 years before the note. Otherwise what it says may support a
-   match and never clears one. A support note read that way never stands in front of another
-   check: it is the latest check only when it is the only kind there is.
-5. **Countries.** Residence and nationality on every record, the approved document's country,
-   and every country the support notes name. A country a support note only mentions, as a
-   nationality word or in a note set aside as a failed check, is not a tie, but it stops a
-   location clearance against that country.
+   match and never clears one. A doubtful support note supplies the latest check only when
+   there is no other kind of check.
+5. **Countries.** Take residence and nationality from every customer record and the document
+   country from the latest approved check. Explicit travel-only mentions and superseded documents
+   can block a location clearance when the hit is linked to that country. Other country mentions
+   without a residence tie can also block a clearance when the hit is linked to that country.
 6. **Several people fit.** Each is decided separately. One shared decision is given; different
    decisions become `REVIEW` with `AMBIGUOUS_CUSTOMER_RECORD`. The customer is `AMBIGUOUS` either way.
 
@@ -77,10 +77,12 @@ separate explain file, and cannot create a clearance.
 A hit's date of birth is taken from the first place that has one:
 
 1. its `dobs` field;
-2. the opening line of its profile notes ("born on 17 July 1939", or an age at a date, which
+2. the opening paragraph of its profile notes ("born on 17 July 1939", or an age at a date, which
    gives two possible birth years);
-3. web search results for its name, but only a result that describes the same kind of listing
-   (from the hit's primary category) in a country tied to the hit. The rest are namesakes.
+3. search results across the normalized keys for its name, deduplicated by result ID. A result
+   must describe the same kind of listing (from the hit's primary category) in a country tied
+   to the hit. Dates recovered by widening the search or reading wrapped text can support a
+   match, while a clearance on birth date still requires the original evidence to contradict it.
 
 Countries come from `countries`, `nationality`, `citizenship`, the last part of each address and
 the place of birth. Dated reports are only the English lines of the form
@@ -93,14 +95,19 @@ the facts that decided it:
 
 | Ground | Evidence cited |
 |---|---|
-| Date of birth | The check or note that gave the customer's date, plus the search result if the hit's date came from one |
+| Date of birth | The check or note that gave the customer's date, plus any search result or newly read profile paragraph that supplied the hit's date, including any separate search results used to check the clearance |
 | Location mismatch | Every record that ties the customer to a country |
+| Precautionary country overlap | The established country records and the earlier approved checks or travel notes that blocked clearance |
 | Location agreement | The records that give the shared country |
 | Verified name mismatch | The identity check that gave the legal name |
 | Date of death | The hit's `deceased_date` field, written `H-xxxxxx#deceased_date` |
 
-The reason text opens with how the customer was found, then states each decisive fact with its
-own values.
+The reason text opens with how the customer was found, then states the selected grounds with
+their values. For one customer the evidence list comes from those same grounds. When several
+candidates fit the alert, each is decided alone. The reason states one decisive comparison per
+candidate within the four-sentence limit, or the shared facts once when every candidate rests
+on the same ones. The evidence is everything any candidate cites when decided alone, which is
+how the practice labels cite it.
 
 ## Staying the same from run to run
 
@@ -288,6 +295,9 @@ python -m unittest discover -s system/tests
 | `test_rules.py` | Name, date and country rules, and the decision table |
 | `test_extract.py` | Reading notes, profile sentences, dated reports and search results |
 | `test_pipeline.py` | 30 whole-run cases the policy covers but the development set barely shows: joint accounts, family members sharing a phone, rejected checks, checks written only as notes, companies, a date of death, namesakes in search results, no record found |
+| `test_watchlist_dob_recovery.py` | 12 cases on reading the listed person's date of birth from a wrapped opening paragraph and from every search key. A date found only that way may support a match or stop a clearance, and never clears |
+| `test_country_clearances.py` | 7 cases on country evidence: the latest approved document, a superseded one, a territory against its parent country, a residence in a note, a holiday |
+| `test_decision_evidence.py` | 6 cases checking that the scored reason and the cited records describe the same facts, for one customer and for several candidates |
 | `test_wording.py` | 15 whole-run cases of text that can be misread: capitals that are not the legal name, a year that is not a birth date, a country written as a nationality. None may clear a hit, and the controls check that a real check still does |
 | `test_layers.py` | The three layer guarantees |
 | `test_layer_*.py` | Each layer on its own |
