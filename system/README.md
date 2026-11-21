@@ -8,7 +8,9 @@ customer (`SAME_ENTITY`), a different person or company (`DIFFERENT_ENTITY`), or
 system/run <data folder> <output file>
 ```
 
-Python 3 standard library only. No language model, no network, no installed packages.
+Python 3 standard library only, no installed packages. The rules make every decision; the default
+run uses no language model and no network. Optional layers on top add strength of evidence, an
+analyst briefing and a model's second opinion, and are described below.
 
 ## Architecture
 
@@ -23,10 +25,15 @@ flowchart TD
     X --> RH
     N[names.py / dates.py / countries.py<br/>comparison rules] --> DE
     DE --> O[pipeline.py<br/>one JSON line per hit]
+    DE -.->|decision + both pictures| L[layers/<br/>score, briefing, reviewer]
+    L -.-> E[explain file<br/>strength, briefing, second opinion]
+    L -.->|only when enforcing:<br/>clearance to review| O
 ```
 
 Both sides are resolved before anything is compared. The decision step never reads raw text: it
 only sees two pictures made of facts, each fact carrying the ID of the record it came from.
+The dotted lines are the optional layers: they read the decision and the two pictures, write to a
+separate explain file, and cannot create a clearance.
 
 | File | Job |
 |---|---|
@@ -37,6 +44,7 @@ only sees two pictures made of facts, each fact carrying the ID of the record it
 | `screening/names.py`, `dates.py`, `countries.py` | The comparison rules of principles 6 to 8 |
 | `screening/decide.py` | Clear only on a contradiction, confirm only on agreement, otherwise review |
 | `screening/pipeline.py` | Runs it and writes the output |
+| `screening/layers/` | Optional layers: `score.py`, `briefing.py`, `reviewer.py`, `reader.py`, and `model.py` for the model calls |
 
 ## How we find the customer
 
@@ -96,15 +104,85 @@ check by comparing them.
 
 ## Model and prompts
 
-None. The policy's rules are explicit enough to run as code, and the free text that matters has
-stable anchors: legal names are printed in capitals in identity notes, dates and countries are
-recognisable in any wording, and listing phrases are fixed. A model would add cost and
-run-to-run variation without a measurable gain on the development set.
+The decision uses no model. The policy's rules are explicit enough to run as code, and the free
+text that matters has stable anchors: legal names are printed in capitals in identity notes, dates
+and countries are recognisable in any wording, and listing phrases are fixed.
+
+Two optional layers call a language model through OpenRouter. Both are off by default, and
+neither can create a clearance:
+
+- **reader** copies a legal name, a date of birth and a country out of an identity note the
+  patterns cannot read. Every value it returns must appear in the note as written, or it is dropped.
+- **reviewer** reads the facts behind each clearance and says whether it agrees, with one sentence of reason.
+
+Both ask at temperature 0 with a fixed seed and a pinned model ID (`SCREENING_MODEL`), cache
+every answer within a run, and treat any failure as "no answer". The prompts are in
+`screening/layers/reader.py` and `screening/layers/reviewer.py`.
+
+## Layers on top of the rules
+
+The rules decide. Four layers add what rules alone do not: how strong the evidence is, what was
+missing, and a second pair of eyes. Each one can be switched on its own, so its effect can be measured.
+
+| Layer | What it adds | Model | Default |
+|---|---|---|---|
+| `score` | Strength of evidence in bits, with each field's share. A rare name or country that agrees counts for more | no | on |
+| `briefing` | What decided the hit, which facts were missing, and what one more fact would settle it | no | on |
+| `reviewer` | A second opinion on every clearance | yes | off |
+| `reader` | Reads identity notes the patterns cannot | yes | off |
+
+Each layer has three modes, set with `SCREENING_LAYERS` (for example `score=on,reviewer=enforce`)
+or `system/layers.json`:
+
+- `off`: it does not run.
+- `on`: it writes to the explain file and changes nothing that is scored. For the reader, what it
+  reads may support a match but may never clear a hit.
+- `enforce`: it may also turn a clearance into a review. For the reader, what it reads counts in full.
+
+Three guarantees hold for every layer, and `system/tests/test_layers.py` checks them:
+
+1. With no layer enforcing, the scored file is exactly what the rules alone produce.
+2. No layer can create a clearance. The only change a layer can make is clearance to review.
+3. A layer that fails says nothing, and the rules' answer stands.
+
+```
+python system/run DATA output/dev.jsonl output/dev.explain.jsonl   # also write the explain file
+python tools/ablate.py DATA --stress                               # compare every setting
+```
+
+The explain file is described in `docs/explain-format.md`. It carries far more of each record than
+the scored file, so it is git-ignored.
+
+### What the comparison showed
+
+`tools/ablate.py` runs every setting on the development set and compares it with the rules alone.
+
+| Setting | Decisions changed | Practice labels right | Verdict |
+|---|---|---|---|
+| rules only | 0 | 50 of 50 | the baseline |
+| score on | 0 | 50 of 50 | works: adds strength and rarity, changes nothing scored |
+| score enforce | 0 | 50 of 50 | harmless as calibrated; see below for the version that was not |
+| briefing on | 0 | 50 of 50 | works: 881 briefings, every review says what would settle it |
+| reviewer, reader | not measured here | | need an API key; `tools/ablate.py --runs 5` reports changes and run-to-run stability |
+
+**What did not work.** The first score weighed an agreeing name by its rarity with no cap, as
+textbook record linkage does. A hit exists because the name is similar, so that weight was large
+on almost every hit. It called 284 of 504 clearances "evidence of the same person", and enforcing
+it turned 274 clearances into reviews: the practice score fell from 100 to 47, because 19 of the
+28 clearances the labels confirm were among them. Capping the name at 4 bits and the country at 3
+removed every false flag. What the score still flags is worth a look: everything agrees and the
+contradiction is small, such as two dates in the same year.
+
+**What the layers add that rules do not.** Of the 881 customer-against-hit comparisons on the
+development set, 225 are clearances that rest on country alone while the name agrees: the policy
+clears them, and the briefing says so plainly. 37 are date-of-birth clearances within three years
+or within the same year. In 218 the customer is several records treated as one person. None of
+this changes a decision; all of it is what an analyst would want to know.
 
 ## Time and cost
 
-About 6 seconds for the development set (819 hits, 72,265 customer records) on a laptop. No API
-calls, so no cost.
+About 6 seconds for the development set (819 hits, 72,265 customer records) on a laptop, and about
+8 seconds with the explain file. The default run makes no API calls, so it costs nothing.
 
 ## Results on the practice labels
 
@@ -149,5 +227,17 @@ Evidence: `CUS-783545`, `KYC-80B445`.
 python -m unittest discover -s system/tests
 ```
 
-37 tests cover the name, date and country rules, the decision table and the free-text readers.
-Every name in the tests is invented.
+| File | What it checks |
+|---|---|
+| `test_rules.py` | Name, date and country rules, and the decision table |
+| `test_extract.py` | Reading notes, profile sentences, dated reports and search results |
+| `test_pipeline.py` | 26 whole-run cases the policy covers but the development set barely shows: joint accounts, family members sharing a phone, rejected checks, checks written only as notes, companies, a date of death, namesakes in search results, no record found |
+| `test_layers.py` | The three layer guarantees |
+| `test_layer_*.py` | Each layer on its own |
+
+Every name and record in the tests is invented. `tools/stress.py` damages the real free text nine
+ways and confirms that reading less never creates a clearance.
+
+- **The model layers are unmeasured.** They are built and tested against a stand-in model, but
+  had no API key when this was written. Until `tools/ablate.py --runs 5` shows they are stable,
+  they stay off.

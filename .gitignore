@@ -9,3 +9,8 @@ dev/
 # Python
 __pycache__/
 *.pyc
+
+# The explain file carries far more of each record than the scored file: keep it local.
+*.explain.jsonl
+!viewer/sample/*.explain.jsonl
+output/public_demo.jsonl
