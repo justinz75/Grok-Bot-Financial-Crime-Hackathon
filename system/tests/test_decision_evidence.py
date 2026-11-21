@@ -90,3 +90,18 @@ class DecisionEvidenceTests(unittest.TestCase):
         outcome = combine([missing, known])
         self.assertIn("For the unverified details, the date is unknown.", outcome.reason)
         self.assertIn("For record CUS-000001, the name and birth date match.", outcome.reason)
+
+    def test_unanimous_review_keeps_each_candidates_supporting_evidence(self):
+        f = Folder()
+        first = f.customer("Sera Windell", None, verified=("Sera Windell", None, "Japan"))
+        second = f.customer("Sera Windell", None, verified=("Sera Windell", None, "Japan"))
+        checks = [row["check_id"] for row in f.tables["kyc_checks"]]
+        alert = f.alert("Sera Windell")
+        hit = f.hit(alert, "Sera Windell", countries=["Japan"])
+
+        line = f.run()[hit]
+        self.assertEqual(line["decision"], "REVIEW", line["reason"])
+        self.assertEqual(line["customer_record_id"], "AMBIGUOUS")
+        self.assertEqual(line["evidence"], sorted(checks))
+        self.assertIn(first, line["reason"])
+        self.assertIn(second, line["reason"])

@@ -436,6 +436,8 @@ def combine(outcomes):
         if first.decision == DIFFERENT:
             selected = [shared_codes[0] if shared_codes else o.code for o in outcomes]
         details, evidence = _candidate_facts(outcomes, selected, budget=3)
+        if first.decision == REVIEW:
+            evidence = [source for outcome in outcomes for source in outcome.evidence]
         return Outcome(first.decision, codes, details, evidence, AMBIGUOUS)
     summary = "The candidates lead to different decisions (%s), so a person has to review the hit." % ", ".join(decisions)
     details, evidence = _candidate_facts(outcomes, [o.code if o.decision == DIFFERENT else None

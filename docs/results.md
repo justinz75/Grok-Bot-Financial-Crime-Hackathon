@@ -63,6 +63,90 @@ new clearances created by any layer: none
 - No setting created a clearance. With the capitals taken out of the identity notes, the rules
   alone change 36 decisions, 24 of them to review, none to a clearance, and score 49 of 50.
 
+### The same comparison with a stand-in for the model
+
+`SCREENING_MODEL=fake python tools/ablate.py DATA --runs 2 --stress` runs the model settings
+against a stand-in that reads capitalised words and agrees with every clearance. It shows the
+plumbing works and what a reader that could be trusted would recover. It says nothing about a
+real model.
+
+```
+model: fake
+
+DATA AS GIVEN (compared with the rules alone)
+setting                    diff same  rev | changed to review NEW CLEAR | right unsafe score | unstable  secs
+rules only                  464  125  230 |       0         0         0 |    50      0 100.0 |        -   7.5
+score on                    464  125  230 |       0         0         0 |    50      0 100.0 |        -   8.1
+score enforce               464  125  230 |       0         0         0 |    50      0 100.0 |        -   7.6
+briefing on                 464  125  230 |       0         0         0 |    50      0 100.0 |        -   7.6
+reviewer on (shadow)        464  125  230 |       0         0         0 |    50      0 100.0 |        0   7.8
+reviewer enforce            464  125  230 |       0         0         0 |    50      0 100.0 |        0   9.0
+reader on (cautious)        464  125  230 |       0         0         0 |    50      0 100.0 |        0   7.8
+reader enforce (trusted)    464  125  230 |       0         0         0 |    50      0 100.0 |        0   7.9
+all on                      464  125  230 |       0         0         0 |    50      0 100.0 |        0   8.8
+  score on
+      score bands: inconclusive 294, some evidence of the same 277, some evidence of a different one 117, strong evidence of the same 98, strong evidence of a different one 95
+      clearances where the score leans the other way: 0
+  score enforce
+      score bands: inconclusive 294, some evidence of the same 277, some evidence of a different one 117, strong evidence of the same 98, strong evidence of a different one 95
+      clearances where the score leans the other way: 0
+  briefing on
+      briefings written: 881, with a caveat: 509
+  reviewer on (shadow)
+      reviewer verdicts: agree 504
+  reviewer enforce
+      reviewer verdicts: agree 504
+  reader on (cautious)
+      reader model calls: {"cache_hits": 0, "calls": 0, "failures": 0, "model": "fake", "runs": 1, "seconds": 0.0, "skipped": 0}
+  reader enforce (trusted)
+      reader model calls: {"cache_hits": 0, "calls": 0, "failures": 0, "model": "fake", "runs": 1, "seconds": 0.0, "skipped": 0}
+  all on
+      score bands: inconclusive 294, some evidence of the same 277, some evidence of a different one 117, strong evidence of the same 98, strong evidence of a different one 95
+      clearances where the score leans the other way: 0
+      briefings written: 881, with a caveat: 509
+      reviewer verdicts: agree 504
+      reader model calls: {"cache_hits": 0, "calls": 0, "failures": 0, "model": "fake", "runs": 1, "seconds": 0.0, "skipped": 0}
+new clearances created by any layer: none
+
+IDENTITY NOTES WITHOUT CAPITALS (compared with the rules on the data as given)
+setting                    diff same  rev | changed to review NEW CLEAR | right unsafe score | unstable  secs
+rules only                  430  135  254 |      36        24         0 |    49      0  97.2 |        -   7.5
+score on                    430  135  254 |      36        24         0 |    49      0  97.2 |        -   8.4
+score enforce               430  135  254 |      36        24         0 |    49      0  97.2 |        -   8.1
+briefing on                 430  135  254 |      36        24         0 |    49      0  97.2 |        -   8.2
+reviewer on (shadow)        430  135  254 |      36        24         0 |    49      0  97.2 |        0   8.2
+reviewer enforce            430  135  254 |      36        24         0 |    49      0  97.2 |        0   8.7
+reader on (cautious)        430  135  254 |      36        24         0 |    49      0  97.2 |        0   8.2
+reader enforce (trusted)    463  124  232 |       2         1         0 |    50      0 100.0 |        0   8.1
+all on                      430  135  254 |      36        24         0 |    49      0  97.2 |        0   8.6
+  score on
+      score bands: some evidence of the same 306, inconclusive 298, strong evidence of the same 110, some evidence of a different one 84, strong evidence of a different one 83
+      clearances where the score leans the other way: 0
+  score enforce
+      score bands: some evidence of the same 306, inconclusive 298, strong evidence of the same 110, some evidence of a different one 84, strong evidence of a different one 83
+      clearances where the score leans the other way: 0
+  briefing on
+      briefings written: 881, with a caveat: 513
+  reviewer on (shadow)
+      reviewer verdicts: agree 460
+  reviewer enforce
+      reviewer verdicts: agree 460
+  reader on (cautious)
+      reader model calls: {"cache_hits": 12, "calls": 11, "failures": 0, "model": "fake", "runs": 1, "seconds": 0.04, "skipped": 0}
+  reader enforce (trusted)
+      reader model calls: {"cache_hits": 165, "calls": 159, "failures": 0, "model": "fake", "runs": 1, "seconds": 0.3, "skipped": 0}
+  all on
+      score bands: some evidence of the same 306, inconclusive 298, strong evidence of the same 110, some evidence of a different one 84, strong evidence of a different one 83
+      clearances where the score leans the other way: 0
+      briefings written: 881, with a caveat: 513
+      reviewer verdicts: agree 460
+      reader model calls: {"cache_hits": 12, "calls": 11, "failures": 0, "model": "fake", "runs": 1, "seconds": 0.02, "skipped": 0}
+new clearances created by any layer: none
+```
+
+With the capitals gone, a reader that counts in full brings the changed decisions from 36
+down to 2 and the practice labels back to 50 of 50, and creates no clearance.
+
 ## Text made harder to read: `python tools/stress.py DATA`
 
 Each row damages the development folder one way and runs the system again. The last column is

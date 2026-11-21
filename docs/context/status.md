@@ -1,6 +1,6 @@
 # Where things stand
 
-**Snapshot: 15:05 London time, 21 November 2026. The decision code under `system/screening/` last
+**Snapshot: 15:15 London time, 21 November 2026. The decision code under `system/screening/` last
 changed at commit `73ed186`.**
 
 This page goes out of date quickly. The live picture is always in git:
@@ -12,13 +12,6 @@ git branch -r                     # which task branches have been pushed
 ```
 
 If you change the state of a task, update this page in the same pull request.
-
-The `task/screening-improvements` draft includes the follow-up fixes from the PR #5 review.
-The screening unit suite passed 233 tests and the official validator accepted all 819 development
-predictions, with 50 right decisions on the practice labels. Compared with the checked-in predictions on
-`main` at `e120f22`, no verdict, reason code or customer record changed. The longest ambiguous
-reason on the draft dropped from 1555 to 941 characters, and all ambiguous reasons fit the
-four-sentence budget.
 
 ## Numbers to expect
 
@@ -89,14 +82,27 @@ The stress test and the layer comparison are reported in [system/README.md](../.
 
 ## In progress
 
-The model layers are on `main` but off by default. They have only run against a stand-in model:
-no API key was available, so a real model is still unmeasured. That measurement is Teammate C's job.
+At 14:30 the owner asked the owner's session to finish the remaining team tasks itself. The
+traceability matrix, the results page, the demo script and the submission text are on `main`
+(see the table above). What is still open:
 
-| What | Who | Where | State at the snapshot |
-|---|---|---|---|
-| Model check, results table, demo script, submission text, video | Teammate C | branch `task/results`, not pushed yet | Handed off at 12:52. `tools/model_check.py` and `tools/ablate.py` are on `main`, so every job can start |
+| What | State at the snapshot |
+|---|---|
+| The model layers against a real model (`tools/model_check.py`, the model rows of `tools/ablate.py`) | Blocked: there is no OpenRouter key on the owner's machine. The layers stay off, and the scored run uses no model |
+| The 2-minute video | Not recorded. The shot list is [demo-script.md](../demo-script.md). It needs a person |
+| The submission form | Not sent. The text is in [submission.md](../submission.md); the personal details are the team's to fill in |
+| A hosted copy of the viewer | Needs GitHub Pages switched on in the repository settings, which only the repository's owner can do |
 
-The handoffs are `tasks/teammate-A-viewer.md`, `tasks/teammate-B-data.md` and
+Pull request 5 includes the reason and evidence changes from pull request 4, expands birth-date
+recovery, and scopes location precautions to countries tied to the hit. When several candidates
+all require review, their evidence includes the records behind each candidate's comparison.
+
+The merge candidate based on `1891ec0` passed 234 screening tests. Its regenerated development
+output matches `main` on the decision, reason code and customer record for all 819 hits. All 50
+practice decisions and all 50 practice evidence lists match the references. Ambiguous reasons
+fit the four-sentence budget, with the longest reduced from 1555 to 941 characters.
+
+The handoffs were `tasks/teammate-A-viewer.md`, `tasks/teammate-B-data.md` and
 `tasks/teammate-C-model-and-demo.md`.
 
 The viewer was redesigned by the owner at 14:20 (decision 11 in [decisions.md](decisions.md)).
@@ -128,8 +134,8 @@ This is the owner's timeline, set at 11:33. The first working version landed ear
 
 | Time | Work |
 |---|---|
-| until about 14:30 | Layers, viewer and data jobs, as listed above |
-| 14:30 to 15:30 | Measure the model layers. Keep one only if it helps and five runs agree. Confirm a run stays under 30 minutes |
+| until about 14:30 | Layers, viewer and data jobs, as listed above. Done |
+| 14:30 to 15:30 | Measure the model layers. Not done: no API key. Used instead for the stress test on real data, the public-list test and the fixes they led to |
 | 15:00 | Office hours with the mentors. Bring the open questions from [decisions.md](decisions.md) |
 | 15:30 to 16:15 | Final `system/README.md` and final `output/dev.jsonl` |
 | 16:15 to 16:45 | Record the 2-minute video, push, submit |
