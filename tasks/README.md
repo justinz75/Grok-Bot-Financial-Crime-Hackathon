@@ -1,7 +1,24 @@
 # Tasks for delegation
 
+## Start here: one handoff per teammate
+
+Each handoff is written to be followed step by step, with a prompt to paste into an AI assistant
+and checks that say when it is done. They touch different files, so all three can run at once.
+
+| Who | Handoff | Builds | Needs the real data? |
+|---|---|---|---|
+| Teammate A | [The review viewer](teammate-A-viewer.md) | `viewer/index.html` | no, sample files are provided |
+| Teammate B | [More data](teammate-B-data.md) | country check, more checked answers, a demo on public lists | yes |
+| Teammate C | [Model check, results table and demo](teammate-C-model-and-demo.md) | `docs/results.md`, demo script, video | yes, plus an OpenRouter key |
+
+The viewer reads two files: the scored output and the explain file described in
+[docs/explain-format.md](../docs/explain-format.md).
+
+## The wider task list
+
 Six independent tasks. Each can be given to a different AI agent or teammate, and each touches its
 own files, so they can run at the same time. Hand an agent this file plus one task file.
+Tasks 01, 04 and 06 are already covered by the handoffs above.
 
 | # | Task | Owns | Needs the data? | Why it matters |
 |---|---|---|---|---|
