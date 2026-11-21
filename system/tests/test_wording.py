@@ -85,16 +85,16 @@ class CapitalsThatAreNotTheLegalName(Wording):
 
 
 class YearsThatAreNotBirthDates(Wording):
-    # In the two support-note cases the hit is the customer, and the system answers
-    # REVIEW where SAME_ENTITY would be right: the later note still stands in front of
-    # the real check. What matters here is that it no longer clears.
+    # In the two support-note cases the hit is the customer. The later note is not
+    # believed and the real check keeps its place, so the answer is the one the real
+    # check gives.
     def test_a_year_beside_birth_words_in_a_support_note(self):
         f = Folder()
         rid, a = self.person(f)
         f.note(rid, "Customer asked us to confirm the date of birth we hold for him. Account open since 2019.")
         h = f.hit(a, "Holm, Lars", ["1977"], ["Germany"])
         line = f.run()[h]
-        self.assertNotEqual(line["decision"], CLEARED, line["reason"])
+        self.check(line, "SAME_ENTITY", "NAME_DOB_MATCH")
         self.assertNotIn("2019", line["reason"])
 
     def test_a_year_beside_capitals_in_a_support_note(self):
@@ -105,6 +105,38 @@ class YearsThatAreNotBirthDates(Wording):
         line = f.run()[h]
         self.assertNotEqual(line["decision"], CLEARED, line["reason"])
         self.assertNotIn("NEW CARD", line["reason"])
+
+    def test_a_later_support_note_does_not_hide_a_date_of_birth_that_agrees(self):
+        # Found on real data by tools/stress.py. The real check's date agrees with the hit,
+        # so a country difference must not clear it. Hidden behind the note, it did.
+        f = Folder()
+        rid, a = self.person(f, dob="1999-05-10", country="Nigeria")
+        f.note(rid, "Card delivery address updated. Date of birth on file confirmed; customer since 2019.")
+        h = f.hit(a, "Holm, Lars", ["1999"], ["United Kingdom"])
+        line = f.run()[h]
+        self.check(line, "REVIEW", "INSUFFICIENT_DATA")
+        self.assertIn("1999-05-10", line["reason"])
+
+    def test_a_later_support_note_does_not_hide_a_verified_name(self):
+        # The same displacement turned a clearance into a match: the real check's legal
+        # name was hidden, and the name on the record then agreed with the hit.
+        f = Folder()
+        rid = f.customer("Lars Holm", "1977-12-13", verified=("GRETA HOLM", "1977-12-13", "Germany"))
+        a = f.alert("Lars Holm", account=f.field("accounts", "customer_id", rid, "account_id"))
+        f.note(rid, "Card delivery address updated. Date of birth on file confirmed; customer since 2019.")
+        h = f.hit(a, "Holm, Lars", ["1977"], ["Germany"])
+        self.check(f.run()[h], CLEARED, "NAME_MISMATCH_VERIFIED")
+
+    def test_a_doubtful_note_in_the_check_channel_keeps_its_place(self):
+        # A newer identity check read with doubt is still the newer check. The older
+        # check's legal name must not clear what the newer one may deny.
+        f = Folder()
+        rid = f.customer("Lars Holm", "1977-12-13", verified=("GRETA HOLM", "1977-12-13", "Germany"))
+        a = f.alert("Lars Holm", account=f.field("accounts", "customer_id", rid, "account_id"))
+        f.note(rid, "The provider verified the passport of MARTA ORTEGA, born 1977-12-13, issued in Germany, on 2024-03-01.",
+               channel="kyc", created_at="2024-03-01")
+        h = f.hit(a, "Holm, Lars", [], ["Germany"])
+        self.assertNotEqual(f.run()[h]["decision"], CLEARED)
 
     def test_a_document_date_in_a_check_is_not_a_birth_date(self):
         f = Folder()

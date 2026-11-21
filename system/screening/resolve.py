@@ -279,7 +279,9 @@ class Resolver(object):
             elif code != C.IGNORED and source not in countries.setdefault(code, []):
                 countries[code].append(source)
 
-        checks = []  # (date, source ID, legal name, date of birth, [country codes], unread country)
+        # (date, source ID, legal name, date of birth, [country codes], unread country,
+        #  supports but never clears, set aside when another check exists)
+        checks = []
         unread_check = False
         for rid in group:
             row = store.customer[rid]
@@ -296,7 +298,8 @@ class Resolver(object):
                 code = C.resolve(raw) if raw else C.IGNORED
                 checks.append((_order(D.parse_date(check.get("checked_at"))), text(check.get("check_id")),
                                text(check.get("verified_name")), D.parse_date(check.get("verified_dob")),
-                               [code] if code and code != C.IGNORED else [], raw if code is None else None, False))
+                               [code] if code and code != C.IGNORED else [], raw if code is None else None,
+                               False, False))
             for note in store.notes_of(rid):
                 note_id, body = text(note.get("note_id")), text(note.get("text"))
                 looks_like_check = key(note.get("channel")) == "kyc"
@@ -318,7 +321,7 @@ class Resolver(object):
                         got, body, looks_like_check, note.get("created_at"), held, kind == COMPANY)
                     checks.append((_order(D.parse_date(note.get("created_at"))), note_id,
                                    got.get("name") or "", got.get("dob"), got.get("countries") or [], None,
-                                   bool(got.get("soft")) or doubtful))
+                                   bool(got.get("soft")) or doubtful, doubtful and not looks_like_check))
         if screened.name:
             names.append((screened.name, None))
 
@@ -328,7 +331,14 @@ class Resolver(object):
         # could not believe: it supports a match and never clears a hit
         soft_source = None
         if checks:
-            latest = max(checks, key=lambda item: (item[0], item[1]))
+            # A support note the rules read as a check and could not believe never stands in
+            # front of another check: taken as the latest, it would hide what a real check
+            # established, and an agreeing date of birth that is hidden lets a country
+            # difference clear the hit. It is the latest check only when it is the only kind.
+            # A doubtful note in the identity-check channel is a real check read with doubt,
+            # so it keeps its place: an older check must not clear what a newer one may deny.
+            standing = [c for c in checks if not c[7]] or checks
+            latest = max(standing, key=lambda item: (item[0], item[1]))
             verified_name, verified_source = latest[2] or None, latest[1]
             if latest[6]:
                 soft_source = latest[1]
