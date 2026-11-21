@@ -259,9 +259,9 @@ class Resolver(object):
                                [code] if code and code != C.IGNORED else [], raw if code is None else None))
             for note in store.notes_of(rid):
                 note_id, body = text(note.get("note_id")), text(note.get("text"))
-                got = X.read_identity_note(body, note.get("created_at"))
+                looks_like_check = key(note.get("channel")) == "kyc"
+                got = X.read_identity_note(body, note.get("created_at"), is_check=looks_like_check)
                 if got is None:
-                    looks_like_check = key(note.get("channel")) == "kyc"
                     unread_check = unread_check or looks_like_check
                     # a place the notes say they lived; for a check that could not be
                     # read, the document's country in whatever form it is written
@@ -303,8 +303,9 @@ class Resolver(object):
                         countries, unknown, screened.at, primary=first, dob_can_clear=dob_can_clear)
 
     def screened_only(self, screened):
-        """No record fits: the screened details are all there is."""
-        countries = {screened.code: []} if screened.code else {}
-        unknown = [screened.country] if screened.country and not screened.code and C.resolve(screened.country) is None else []
+        """No record fits: the screened details are all there is. They are declared,
+        unverified and tied to no record, so they can neither clear nor confirm a hit;
+        only the entity type and a date of death, which need no record, still decide."""
         names = [(screened.name, None)] if screened.name else []
-        return Customer(screened.kind, [], None, None, names, screened.dob, None, countries, unknown, screened.at)
+        return Customer(screened.kind, [], None, None, names, screened.dob, None, {}, [], screened.at,
+                        dob_can_clear=False, confirmable=False)

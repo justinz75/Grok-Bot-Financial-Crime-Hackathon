@@ -72,20 +72,32 @@ class Run(object):
         }
 
 
+def _unprocessed(row, error):
+    """A hit that could not be processed goes to a person: never a silent clearance."""
+    return {
+        "hit_id": text(row.get("hit_id")), "alert_id": text(row.get("alert_id")),
+        "decision": REVIEW, "reason_code": "INSUFFICIENT_DATA", "customer_record_id": None,
+        "reason": "This hit could not be processed (%s), so a person has to review it." % type(error).__name__,
+        "evidence": [],
+    }
+
+
 def run(folder, output):
     started = time.time()
-    job = Run(folder)
     lines = []
-    for row in job.store.hits:
+    try:
+        job = Run(folder)
+        hits = job.store.hits
+    except Exception as error:  # the folder could not be loaded: every hit still gets a line
+        from .store import find_folder, read_jsonl
+        import os
+        job, hits = None, read_jsonl(os.path.join(find_folder(folder), "hits.jsonl"))
+        lines = [_unprocessed(row, error) for row in hits]
+    for row in (hits if job else []):
         try:
             lines.append(job.decide_hit(row))
-        except Exception as error:  # one unreadable hit must not lose the rest: it goes to review
-            lines.append({
-                "hit_id": text(row.get("hit_id")), "alert_id": text(row.get("alert_id")),
-                "decision": REVIEW, "reason_code": "INSUFFICIENT_DATA", "customer_record_id": None,
-                "reason": "This hit could not be processed (%s), so a person has to review it." % type(error).__name__,
-                "evidence": [],
-            })
+        except Exception as error:  # one unreadable hit must not lose the rest
+            lines.append(_unprocessed(row, error))
     with open(output, "w", encoding="utf-8", newline="\n") as handle:
         for line in lines:
             handle.write(json.dumps(line, ensure_ascii=False) + "\n")

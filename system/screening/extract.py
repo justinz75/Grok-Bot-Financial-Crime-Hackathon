@@ -216,18 +216,23 @@ def _upper_name(text):
 _CODE_AFTER = re.compile(r"\b(?:ctry|country|issued in|issued by|from)[:\s]+([A-Z]{2,3})\b")
 
 
-def read_identity_note(text, created_at=None):
+def read_identity_note(text, created_at=None, is_check=False):
     """Read an identity check that was only written up as a note. Returns None when
-    the note is not about an identity check, otherwise a dict with the verified
-    name, date of birth, document country and whether the check passed."""
+    the note is not readable as an identity check, otherwise a dict with the verified
+    name, date of birth, document country and whether the check passed.
+
+    The legal name is the run of capitals. A note without one is still read for its
+    date of birth when it says outright that the date is a birth date; its name then
+    stays unknown, which can never clear a hit."""
     text = text or ""
-    if not _IDENTITY.search(text):
+    if not (is_check or _IDENTITY.search(text)):
         return None
     name = _upper_name(text)
-    if name is None:
-        return None  # no printed legal name: not readable as an identity check
-    # the name is masked so that a name such as JORDAN or FRENCH is not read as a country
-    text = text.replace(name, " ")
+    if name is None and not _BORN.search(text):
+        return None
+    if name:
+        # the name is masked so that a name such as JORDAN or FRENCH is not read as a country
+        text = text.replace(name, " ")
     found = [d for d, _, _ in D.find_dates(text, bare_years=True)]
     checked = D.parse_date(created_at)
     others = [d for d in found if d != checked]

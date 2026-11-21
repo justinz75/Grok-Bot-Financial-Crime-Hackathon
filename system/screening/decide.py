@@ -23,9 +23,11 @@ class Customer(object):
 
     def __init__(self, kind, record_ids=(), verified_name=None, verified_source=None,
                  names=(), dob=None, dob_source=None, countries=None,
-                 unknown_countries=(), screened_at=None, primary=None, dob_can_clear=True):
+                 unknown_countries=(), screened_at=None, primary=None, dob_can_clear=True,
+                 confirmable=True):
         self.kind = kind
         self.dob_can_clear = dob_can_clear        # False when an identity check could not be read
+        self.confirmable = confirmable            # False when no customer record was found
         self.record_ids = sorted(record_ids)
         self.primary = primary or (self.record_ids[0] if self.record_ids else None)  # the record first found
         self.verified_name = verified_name        # legal name on the latest approved check
@@ -212,15 +214,20 @@ def decide(customer, hit, rules):
     if name == "agree":  # agreement on name is stated, not cited: it rests on no single record
         sentences.append("The customer's name agrees with the hit's name %s." % hit.name.rstrip("."))
 
-    if company and name == "agree" and location == "agree":
-        return Outcome(SAME, ["NAME_LOCATION_MATCH"], sentences, evidence, record_id)
-    if not company and name_and_dob_agree and location != "mismatch":
-        codes = ["NAME_DOB_MATCH"]
-        if location == "agree":
-            codes.append("NAME_DOB_LOCATION_MATCH")
-        return Outcome(SAME, codes, sentences, evidence, record_id)
+    if customer.confirmable:
+        if company and name == "agree" and location == "agree":
+            return Outcome(SAME, ["NAME_LOCATION_MATCH"], sentences, evidence, record_id)
+        if not company and name_and_dob_agree and location != "mismatch":
+            codes = ["NAME_DOB_MATCH"]
+            if location == "agree":
+                codes.append("NAME_DOB_LOCATION_MATCH")
+            return Outcome(SAME, codes, sentences, evidence, record_id)
 
-    if location == "mismatch":  # name and date of birth agree, the countries do not
+    if not customer.confirmable:
+        sentences = sentences[:2] + [
+            "The screened details are unverified and belong to no known record, so they can "
+            "neither clear nor confirm the hit and a person has to review it."]
+    elif location == "mismatch":  # name and date of birth agree, the countries do not
         sentences.append(
             "Every country tied to the customer (%s) differs from every country tied to the hit (%s), "
             "and a country difference does not clear a hit whose name and date of birth agree, "
