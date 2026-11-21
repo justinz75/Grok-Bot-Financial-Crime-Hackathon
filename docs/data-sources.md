@@ -27,7 +27,8 @@ The demo takes the first six eligible person profiles in ID order and uses the f
 birth date and country to populate each set of invented customer records. Each profile is copied
 into one hit per alert, since the runner emits one decision per hit. In each set of three output
 lines the customers have, in order, the matching birth date, a birth date twenty years later,
-and a missing birth date. The shifted date retains its original precision and uses February 28
+and a missing birth date. A profile is eligible when it is a person with a birth date, a country
+and a name of at least two real parts: the policy cannot confirm a person on a one-part name. The shifted date retains its original precision and uses February 28
 if February 29 is unavailable in the destination year.
 
 Keep the downloaded lists, generated data and demo output local.

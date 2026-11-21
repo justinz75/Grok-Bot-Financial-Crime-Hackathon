@@ -4,10 +4,16 @@ import argparse
 import calendar
 import csv
 import json
+import sys
 from pathlib import Path
 
 
-DATA = Path(__file__).resolve().parents[1] / "data"
+ROOT = Path(__file__).resolve().parents[1]
+DATA = ROOT / "data"
+sys.path.insert(0, str(ROOT / "system"))
+
+from screening.names import NameRules  # noqa: E402  (the system's own count of real name parts)
+
 PERSON_COUNT = 6
 TABLES = ("alerts", "hits", "customers", "accounts", "onboarding", "kyc_checks",
           "notes", "search_results")
@@ -25,8 +31,12 @@ def select_people(csv_path):
         missing = REQUIRED_COLUMNS.difference(rows.fieldnames or ())
         if missing:
             raise ValueError("sanctions CSV is missing columns: " + ", ".join(sorted(missing)))
+        # The policy cannot confirm a person on a name with fewer than two real parts,
+        # so such a profile would send its "same person" customer to review.
+        rules = NameRules()
         eligible = [row for row in rows if row["schema"] == "Person"
-                    and split_values(row["birth_date"]) and split_values(row["countries"])]
+                    and split_values(row["birth_date"]) and split_values(row["countries"])
+                    and len(rules.parts(row["name"])) >= 2]
 
     people = sorted(eligible, key=lambda row: row["id"])[:PERSON_COUNT]
     if len(people) != PERSON_COUNT:
