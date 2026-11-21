@@ -1,7 +1,7 @@
 # Where things stand
 
-**Snapshot: 13:27 London time, 21 November 2026. The code on `main` last changed at commit
-`38e0b75`; later commits change documents only.**
+**Snapshot: 13:30 London time, 21 November 2026. The code under `system/` last changed at commit
+`38e0b75`; later commits add tools, the test workflow and documents.**
 
 This page goes out of date quickly. The live picture is always in git:
 
@@ -28,6 +28,9 @@ different on the same commit, stop and report it.
 | `python ROOM/validate.py --data DATA --output <file>` | `819 lines read, 0 problems` |
 | the same with `--score DATA/practice_labels.jsonl` | `50 hits, 50 right decisions, 0 unsafe clearances`, `decision score 100.0`, `reason code 100%, customer record 100%` |
 | evidence list compared with the reference list on the practice labels | equal on 50 of 50 |
+| `python tools/repro.py DATA --runs 5 --strict` | 5 fresh processes with hash seeds `random`, 1, 2, 3, 4: `hits whose decision or reason code differs between runs: 0`, scored and explain files `byte-identical across 5 runs: yes`, `committed output/dev.jsonl equals a fresh run: yes`, exit code 0 |
+| the scored file's SHA-256, from the same command | `28b0b35d1d11abe5e65cdeca9b9f174d7cee16f09272f437910f3d277fd3c91d` |
+| the test workflow on GitHub, read at 13:30 for commit `9ae3d90` | 8 jobs, all `success`: Linux, Windows and macOS with Python 3.10 and 3.12, Linux with Python 3.8, and the check that `system/run` is executable, has the `python3` line and Unix line endings |
 
 The committed predictions, by reason code:
 
@@ -53,6 +56,7 @@ The stress test and the layer comparison are reported in [system/README.md](../.
 | The plug-in layer framework, the explain file, the layer comparison tool | `dc22837` |
 | The `score` and `briefing` layers, and 26 whole-run tests for rare policy cases (task 02) | `0dff5b7` |
 | The model layers (`reader`, `reviewer`, the OpenRouter client), `tools/model_check.py`, and a 27th whole-run test | `38e0b75` |
+| The five-run reproducibility check `tools/repro.py` and the test workflow `.github/workflows/tests.yml` (task 03) | `9ae3d90` |
 
 ## In progress
 
@@ -72,10 +76,9 @@ The handoffs are `tasks/teammate-A-viewer.md`, `tasks/teammate-B-data.md` and
 
 | Task | What it would give us |
 |---|---|
-| [03, reproducibility proof and CI](../../tasks/03-reproducibility-ci.md) | A command that proves five runs are identical, and tests on three operating systems and three Python versions. Reproducibility is 10% of the score |
 | [05, traceability matrix](../../tasks/05-traceability.md) | One table showing every policy rule has a place in the code and a test |
 
-Ask the owner before starting either.
+Ask the owner before starting it.
 
 ## The plan for the rest of the day
 
@@ -95,7 +98,9 @@ This is the owner's timeline, set at 11:33. The first working version landed ear
 - [ ] `main` passes `python -m unittest discover -s system/tests`.
 - [ ] `output/dev.jsonl` is byte-identical to a fresh run of the final code. The organisers
       re-run the system on the development set to check this, so regenerate the file after the
-      last change under `system/`.
+      last change under `system/`. `python tools/repro.py DATA --strict` checks it and exits 0
+      only when it holds.
+- [ ] The test workflow is green on the last commit.
 - [ ] `validate.py` reports 0 problems on it.
 - [ ] `system/run` is executable in git, starts with `#!/usr/bin/env python3` and has Unix line
       endings. All three were true at the snapshot.

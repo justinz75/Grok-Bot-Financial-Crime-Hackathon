@@ -99,8 +99,16 @@ own values.
 
 There is no model, no randomness, no clock and no network in the decision path. Tables are read
 in file order, every set is sorted before it is written, and ties between identity checks are
-broken by date and then by ID. Two runs on the same folder produce byte-identical files, which we
-check by comparing them.
+broken by date and then by ID.
+
+This is checked, not assumed. `python tools/repro.py DATA --runs 5 --strict` starts the system as
+five fresh processes, each with a different hash seed, and compares what they write. On the
+development set all five scored files are byte-identical, so are the five explain files, no hit
+differs in decision or reason code, and the committed `output/dev.jsonl` equals a fresh run.
+
+A workflow (`.github/workflows/tests.yml`) runs the tests on every push: on Linux, Windows and
+macOS with Python 3.10 and 3.12, on Linux with Python 3.8, and once more with a fixed hash seed. It
+also checks that `system/run` is executable, starts with the `python3` line and has Unix line endings.
 
 ## Model and prompts
 
