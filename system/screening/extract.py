@@ -118,14 +118,31 @@ def birth_from_text(text, loose=False):
 
 
 def profile_birth(profile_notes):
-    """A date of birth from the first paragraph of a hit's profile notes. Only its
-    opening line is read, and never a dated report ('According to ...'): provider
-    text is full of numbers that are not ages."""
-    lines = first_paragraph(profile_notes).strip().splitlines()
-    line = lines[0].strip() if lines else ""
-    if not line or len(line) > 400 or re.match(r"according\b", line, re.I):
+    """Read birth facts from the opening prose, including wrapped lines."""
+    opening = first_paragraph(profile_notes)
+    # A provider's structured record or a report belongs to a separate source.
+    if re.match(r"name\s*:", opening, re.I):
         return [], None
-    return birth_from_text(line)
+    opening = re.split(r"(?:^|\n|(?<=[.!?]) +)\s*according\b", opening, maxsplit=1, flags=re.I)[0]
+    opening = " ".join(opening.split())
+
+    for cue in _BORN.finditer(opening):
+        after = opening[cue.end():]
+        if cue.group().replace(".", "").lower() == "dob":
+            after = after.lstrip(".")
+        after = re.sub(r"^\s*(?:[:=–-]\s*)?(?:(?:is|was|on|in|at)\b\s+)*", "", after)
+        dates = D.find_dates(after, bare_years=True)
+        if dates and dates[0][1] == 0:
+            return [dates[0][0]], "explicit"
+
+    for sentence in re.split(r"(?<=[.!?;])\s+", opening):
+        age = find_age(sentence)
+        if age is None:
+            continue
+        dates = D.find_dates(sentence, bare_years=True)
+        if len({date.year for date, _, _ in dates}) == 1:
+            return D.birth_years_from_age(age, dates[0][0]), "age"
+    return [], None
 
 
 # -- web search results ----------------------------------------------------------

@@ -1,7 +1,7 @@
 """Working out who the listed person is (POLICY.md principle 5).
 
 A hit's facts are gathered wherever they are: its fields first, then the opening
-line of its profile notes, then the web search results that are about this hit and
+paragraph of its profile notes, then the web search results that are about this hit and
 not a namesake.
 """
 from . import countries as C
@@ -9,7 +9,7 @@ from . import dates as D
 from . import extract as X
 from .decide import COMPANY, Hit
 from .resolve import kind_of
-from .store import key, text
+from .store import text
 
 PLACE_FIELDS = ("countries", "nationality", "citizenship", "addresses", "place_of_birth")
 
@@ -42,15 +42,20 @@ def build_hit(row, store):
     if dobs:
         origin = "listed"
     elif kind != COMPANY:  # for companies only the dobs field is an incorporation date
-        dobs, how = X.profile_birth(notes)
+        dobs, _ = X.profile_birth(notes)
         if dobs:
             origin = "notes"
+            used = ["%s#profile_notes" % text(row.get("hit_id"))]
         else:
-            results = []
+            results, seen = [], set()
             for query in X.search_keys(name):
-                if query in store.search_by_query:
-                    results = [(text(r.get("result_id")), text(r.get("snippet"))) for r in store.search_by_query[query]]
-                    break
+                for result in store.search_by_query.get(query, ()):
+                    result_id = text(result.get("result_id"))
+                    snippet = text(result.get("snippet"))
+                    identity = result_id or snippet
+                    if identity not in seen:
+                        seen.add(identity)
+                        results.append((result_id, snippet))
             phrase = X.listing_phrase(row.get("primary_category"), row.get("categories"))
             dobs, used = X.search_birth(results, phrase, countries)
             if dobs:
