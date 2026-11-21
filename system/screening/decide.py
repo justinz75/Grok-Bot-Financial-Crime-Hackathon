@@ -61,12 +61,13 @@ class Hit(object):
 
 
 class Outcome(object):
-    def __init__(self, decision, codes, sentences, evidence, record_id=None):
+    def __init__(self, decision, codes, sentences, evidence, record_id=None, grounds=None):
         self.decision = decision
         self.codes = list(codes)                  # every code that applies, main one first
         self.sentences = list(sentences)          # one sentence per decisive fact
         self.evidence = sorted(set(e for e in evidence if e))
         self.record_id = record_id
+        self._grounds = grounds
 
     @property
     def code(self):
@@ -75,6 +76,19 @@ class Outcome(object):
     @property
     def reason(self):
         return " ".join(self.sentences)
+
+    def scored_facts(self, code=None):
+        """Return the text and citations together, reserving one sentence for resolution.
+
+        A candidate in a unanimous clearance needs just one contradiction. The
+        full set of facts remains available to the optional layers.
+        """
+        if not self._grounds:
+            return self.sentences, self.evidence
+        selected = [code] if code else self.codes[:3]
+        facts = [self._grounds[c] for c in selected]
+        evidence = sorted({source for _, sources in facts for source in sources if source})
+        return [sentence for sentence, _ in facts], evidence
 
 
 def _cite(source):
@@ -212,7 +226,7 @@ def decide(customer, hit, rules):
     if grounds:
         codes = [c for c in CLEARING_ORDER if c in grounds]
         evidence = [e for c in codes for e in grounds[c][1]]
-        return Outcome(DIFFERENT, codes, [grounds[c][0] for c in codes], evidence, record_id)
+        return Outcome(DIFFERENT, codes, [grounds[c][0] for c in codes], evidence, record_id, grounds)
 
     # No contradiction: confirm on agreement, otherwise review.
     sentences, evidence = [], []
@@ -264,17 +278,39 @@ def decide(customer, hit, rules):
     return Outcome(REVIEW, ["INSUFFICIENT_DATA"], sentences, evidence, record_id)
 
 
+def _candidate_facts(outcomes, codes):
+    """Fit all candidate comparisons into one sentence, grouping identical facts."""
+    by_facts = {}
+    evidence = []
+    for outcome, code in zip(outcomes, codes):
+        sentences, sources = outcome.scored_facts(code)
+        by_facts.setdefault(tuple(sentences), []).append(outcome.record_id or "unknown")
+        evidence.extend(sources)
+    clauses = []
+    for sentences, records in by_facts.items():
+        facts = ", and ".join(sentence[0].lower() + sentence[1:].rstrip(".") for sentence in sentences)
+        label = "record" if len(records) == 1 else "records"
+        clauses.append("for %s %s, %s" % (label, ", ".join(records), facts))
+    reason = ", and ".join(clauses)
+    return reason[0].upper() + reason[1:] + ".", evidence
+
+
 def combine(outcomes):
     """Several people fit the alert: one decision if they all lead to it, otherwise
     REVIEW with AMBIGUOUS_CUSTOMER_RECORD. Either way the customer is AMBIGUOUS."""
     if len(outcomes) == 1:
         return outcomes[0]
-    evidence = [e for o in outcomes for e in o.evidence]
-    if len(set(o.decision for o in outcomes)) == 1:
+    decisions = sorted({o.decision for o in outcomes})
+    if len(decisions) == 1:
         first = outcomes[0]
         shared_codes = [c for c in first.codes if all(c in o.codes for o in outcomes)]
-        sentences = ["Each of them leads to the same decision."] + first.sentences[:2]
-        return Outcome(first.decision, shared_codes or first.codes, sentences, evidence, AMBIGUOUS)
-    sentence = "They lead to different decisions (%s), so a person has to review it." % ", ".join(
-        sorted(set(o.decision for o in outcomes)))
-    return Outcome(REVIEW, ["AMBIGUOUS_CUSTOMER_RECORD"], [sentence], evidence, AMBIGUOUS)
+        codes = shared_codes or first.codes
+        selected = [None] * len(outcomes)
+        if first.decision == DIFFERENT:
+            selected = [shared_codes[0] if shared_codes else o.code for o in outcomes]
+        details, evidence = _candidate_facts(outcomes, selected)
+        return Outcome(first.decision, codes, ["Each of them leads to the same decision.", details],
+                       evidence, AMBIGUOUS)
+    summary = "They lead to different decisions (%s), so a person has to review it." % ", ".join(decisions)
+    details, evidence = _candidate_facts(outcomes, [None] * len(outcomes))
+    return Outcome(REVIEW, ["AMBIGUOUS_CUSTOMER_RECORD"], [summary, details], evidence, AMBIGUOUS)
