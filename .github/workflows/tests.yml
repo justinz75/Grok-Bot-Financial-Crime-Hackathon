@@ -1,0 +1,64 @@
+# Runs on every push and pull request. Needs no data: every test builds its own invented records.
+name: tests
+
+on:
+  push:
+  pull_request:
+
+permissions:
+  contents: read
+
+jobs:
+  tests:
+    name: ${{ matrix.os }}, Python ${{ matrix.python }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macos-latest]
+        python: ['3.10', '3.12']
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
+        with:
+          python-version: ${{ matrix.python }}
+      - name: Every file compiles
+        run: python -m compileall -q system tools
+      - name: Tests
+        run: python -m unittest discover -s system/tests
+      - name: Tests again with a fixed hash seed
+        run: python -m unittest discover -s system/tests
+        env:
+          PYTHONHASHSEED: '1'
+
+  oldest-python:
+    # Python 3.8 is the oldest version the system promises to run on. It is taken from
+    # the official image because hosted runners no longer carry it on every platform.
+    name: ubuntu-latest, Python 3.8
+    runs-on: ubuntu-latest
+    container: python:3.8-slim
+    steps:
+      - uses: actions/checkout@v5
+      - run: python --version
+      - name: Every file compiles
+        run: python -m compileall -q system tools
+      - name: Tests
+        run: python -m unittest discover -s system/tests
+
+  entry-point:
+    name: system/run as the judges call it
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v5
+      - name: It is executable
+        run: test -x system/run
+      - name: It starts with the python3 line
+        run: test "$(head -n 1 system/run)" = '#!/usr/bin/env python3'
+      - name: It has Unix line endings
+        run: |
+          if grep -q $'\r' system/run; then echo "system/run has Windows line endings"; exit 1; fi
+      - name: It runs and writes a file, even on an empty folder
+        run: |
+          mkdir -p "$RUNNER_TEMP/empty"
+          ./system/run "$RUNNER_TEMP/empty" "$RUNNER_TEMP/out.jsonl"
+          test -f "$RUNNER_TEMP/out.jsonl"
