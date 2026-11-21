@@ -33,4 +33,19 @@ and a name of at least two real parts: the policy cannot confirm a person on a o
 The shifted date retains its original precision and uses February 28 if February 29 is
 unavailable in the destination year.
 
+## The larger test
+
+`tools/make_public_demo.py` builds 18 cases from six profiles. `tools/public_test.py` uses the
+same export for every person with a birth date and a country and every organisation with a
+country, and builds up to seven customers for each whose right answer is known by construction:
+
+```sh
+python tools/public_test.py --people 30000 --companies 30000   # everything, about five minutes
+python tools/public_test.py                                    # 2,000 people and 1,000 organisations
+```
+
+It writes its folder and the cases that did not come out as built to `data/public_test/`, and
+exits 1 if a customer built to be the listed person, or one the policy cannot decide, is
+cleared. The results are in [results.md](results.md).
+
 Keep the downloaded lists, generated data and demo output local.

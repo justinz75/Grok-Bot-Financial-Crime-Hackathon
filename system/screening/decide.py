@@ -127,6 +127,21 @@ def name_state(customer, hit, rules):
     return "unknown", None
 
 
+def short_name_agrees(customer, hit, rules):
+    """True for a person whose names all have fewer than two real parts when one of them
+    still agrees with a name of the hit: every part of the shorter name matches. Such a
+    customer can be neither confirmed nor cleared on name, but the names do agree, and
+    that matters to the one rule that asks whether name and date of birth agree."""
+    if customer.kind == COMPANY:
+        return False
+    held = [customer.verified_name] + [name for name, _ in customer.names]
+    mine = [p for p in (rules.parts(n, False) for n in held if n) if p]
+    theirs = [p for p in (rules.parts(n, False) for n in hit.names) if p]
+    if not mine or not theirs or any(len(p) >= 2 for p in mine):
+        return False
+    return any(rules.agree(p, hp) for p in mine for hp in theirs)
+
+
 def mentioned_ties(customer, hit):
     """The hit's countries that a note about the customer mentions without tying the
     customer to them: a nationality word, or a note set aside as a failed check."""
@@ -223,7 +238,10 @@ def decide(customer, hit, rules):
     # a note mentions one of the hit's countries, and that alone is why the difference does not clear
     mentioned = mentioned_ties(customer, hit) if location != location_state(customer, hit)[0] else []
     name_and_dob_agree = name == "agree" and dob == "agree"
-    if location == "mismatch" and not name_and_dob_agree:
+    # A name with fewer than two real parts cannot confirm or clear, but it can agree. With
+    # the date of birth agreeing too, a country difference does not clear the hit.
+    short_agree = name == "unknown" and dob == "agree" and short_name_agrees(customer, hit, rules)
+    if location == "mismatch" and not name_and_dob_agree and not short_agree:
         sources = [s for ids in customer.countries.values() for s in ids]
         grounds["LOCATION_MISMATCH"] = (
             "The customer is linked only to %s but the hit is linked only to %s."
@@ -246,6 +264,9 @@ def decide(customer, hit, rules):
         evidence += [s for code in shared for s in customer.countries[code]]
     if name == "agree":  # agreement on name is stated, not cited: it rests on no single record
         sentences.append("The customer's name agrees with the hit's name %s." % hit.name.rstrip("."))
+    elif short_agree and location == "mismatch":
+        sentences.append("The customer's name has fewer than two real parts, so it can neither confirm nor clear "
+                         "the hit, but what there is of it agrees with the hit's name %s." % hit.name.rstrip("."))
 
     if customer.confirmable:
         if company and name == "agree" and location == "agree":

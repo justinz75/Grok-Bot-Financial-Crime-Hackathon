@@ -288,6 +288,43 @@ class RareCases(unittest.TestCase):
         self.check(lines[clear], "REVIEW", "INSUFFICIENT_DATA", rid)
         self.check(lines[confirm], "REVIEW", "INSUFFICIENT_DATA", rid)
 
+    def test_28_a_one_part_name_that_agrees_stops_a_country_clearance(self):
+        # Found by tools/public_test.py on real sanctions profiles. A one-part name cannot
+        # confirm or clear, but it agrees, and with the date of birth agreeing too a country
+        # difference does not clear the hit.
+        f = Folder()
+        rid = f.customer("Unknown Farooq", "1968-08-20", "Iceland", verified=("UNKNOWN FAROOQ", "1968-08-20", "Iceland"))
+        a = f.alert("UNKNOWN FAROOQ", account=f.field("accounts", "customer_id", rid, "account_id"))
+        same_part = f.hit(a, "Farooq", ["1968"], ["Pakistan"])
+        longer = f.hit(a, "Muhammad Farooq", ["1968-08-20"], ["Pakistan"])
+        lines = f.run()
+        self.check(lines[same_part], "REVIEW", "INSUFFICIENT_DATA", rid)
+        self.check(lines[longer], "REVIEW", "INSUFFICIENT_DATA", rid)
+        self.assertIn("fewer than two real parts", lines[same_part]["reason"])
+
+    def test_29_a_one_part_name_still_clears_on_country_without_that_agreement(self):
+        f = Folder()
+        rid = f.customer("Unknown Farooq", "1968-08-20", "Iceland", verified=("UNKNOWN FAROOQ", "1968-08-20", "Iceland"))
+        a = f.alert("UNKNOWN FAROOQ", account=f.field("accounts", "customer_id", rid, "account_id"))
+        other_name = f.hit(a, "Ghani Khan", ["1968"], ["Pakistan"])
+        no_date = f.hit(a, "Muhammad Farooq", [], ["Pakistan"])
+        lines = f.run()
+        self.check(lines[other_name], "DIFFERENT_ENTITY", "LOCATION_MISMATCH", rid)
+        self.check(lines[no_date], "DIFFERENT_ENTITY", "LOCATION_MISMATCH", rid)
+
+    def test_30_the_kind_of_listing_does_not_change_the_answer(self):
+        answers = set()
+        for category in ("Sanctions", "PEP", "Adverse Media", "Enforcement"):
+            f = Folder()
+            rid = f.customer("Lars Holm", "1977-12-13")
+            a = f.alert("Lars Holm", account=f.field("accounts", "customer_id", rid, "account_id"))
+            cleared = f.hit(a, "Holm, Lars", ["1951"], ["Germany"], category=category)
+            same = f.hit(a, "Holm, Lars", ["1977"], ["Germany"], category=category)
+            lines = f.run()
+            answers.add((lines[cleared]["decision"], lines[cleared]["reason_code"],
+                         lines[same]["decision"], lines[same]["reason_code"]))
+        self.assertEqual(answers, {("DIFFERENT_ENTITY", "DOB_MISMATCH", "SAME_ENTITY", "NAME_DOB_MATCH")})
+
     def test_20_search_result_about_the_hit_not_a_namesake(self):
         f = Folder()
         rid = f.customer("Tunde Bakare", "1990-04-04", "Nigeria")
