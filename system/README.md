@@ -292,6 +292,9 @@ python -m unittest discover -s system/tests
 | `test_layers.py` | The three layer guarantees |
 | `test_layer_*.py` | Each layer on its own |
 
+Every rule of the policy is mapped to its function and its tests in
+[docs/traceability.md](../docs/traceability.md): 31 rules, none without a test.
+
 Every name and record in the tests is invented. `tools/stress.py` damages the real free text 14
 ways. Nine take text away or reword it, and on the development set none of them creates a
 clearance. Five add text that can be misread, the same wordings as `test_wording.py`. On the
