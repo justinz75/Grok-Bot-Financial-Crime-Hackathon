@@ -1,7 +1,7 @@
 # Where things stand
 
-**Snapshot: 13:30 London time, 21 November 2026. The code under `system/` last changed at commit
-`38e0b75`; later commits add tools, the test workflow and documents.**
+**Snapshot: 13:39 London time, 21 November 2026. The code under `system/` last changed at commit
+`e3cf06a`.**
 
 This page goes out of date quickly. The live picture is always in git:
 
@@ -15,12 +15,12 @@ If you change the state of a task, update this page in the same pull request.
 
 ## Numbers to expect
 
-Every figure below was printed by a command run on `main` at `38e0b75`. If you see something
+Every figure below was printed by a command run on `main` at `e3cf06a`. If you see something
 different on the same commit, stop and report it.
 
 | Command | What it printed |
 |---|---|
-| `python -m unittest discover -s system/tests` | `Ran 168 tests`, `OK` |
+| `python -m unittest discover -s system/tests` | `Ran 169 tests`, `OK` |
 | `python system/run DATA <file>` | `819 hits decided in 6.6s: DIFFERENT_ENTITY 464, REVIEW 230, SAME_ENTITY 125` |
 | the same run, second line | `layers: score=on, reviewer=off, briefing=on, reader=off` |
 | the run twice, files compared | byte-identical |
@@ -30,6 +30,7 @@ different on the same commit, stop and report it.
 | evidence list compared with the reference list on the practice labels | equal on 50 of 50 |
 | `python tools/repro.py DATA --runs 5 --strict` | 5 fresh processes with hash seeds `random`, 1, 2, 3, 4: `hits whose decision or reason code differs between runs: 0`, scored and explain files `byte-identical across 5 runs: yes`, `committed output/dev.jsonl equals a fresh run: yes`, exit code 0 |
 | the scored file's SHA-256, from the same command | `28b0b35d1d11abe5e65cdeca9b9f174d7cee16f09272f437910f3d277fd3c91d` |
+| `python tools/check_countries.py <the ISO 3166 list>` | `249 countries checked, 0 problems`. It also prints `EXTRA CODE XK (Kosovo)`: Kosovo is not on the ISO list and is kept on purpose, because watchlists use it |
 | the test workflow on GitHub, read at 13:30 for commit `9ae3d90` | 8 jobs, all `success`: Linux, Windows and macOS with Python 3.10 and 3.12, Linux with Python 3.8, and the check that `system/run` is executable, has the `python3` line and Unix line endings |
 
 The committed predictions, by reason code:
@@ -57,6 +58,7 @@ The stress test and the layer comparison are reported in [system/README.md](../.
 | The `score` and `briefing` layers, and 26 whole-run tests for rare policy cases (task 02) | `0dff5b7` |
 | The model layers (`reader`, `reviewer`, the OpenRouter client), `tools/model_check.py`, and a 27th whole-run test | `38e0b75` |
 | The five-run reproducibility check `tools/repro.py` and the test workflow `.github/workflows/tests.yml` (task 03) | `9ae3d90` |
+| Country names the official list writes back to front, found by Teammate B's country check | `e3cf06a` |
 
 ## In progress
 
@@ -65,8 +67,8 @@ no API key was available, so a real model is still unmeasured. That measurement 
 
 | What | Who | Where | State at the snapshot |
 |---|---|---|---|
-| The review viewer, `viewer/index.html` | Teammate A | branch `task/viewer`, pushed | A first version was committed at 13:08 (`8364c21`). Not merged |
-| Country table check, clearance audit, demo on public lists | Teammate B | branch `task/data`, pushed | `tools/make_public_demo.py` and `docs/data-sources.md` were committed at 13:18 (`14d4f29`). Not merged. The country check and the audit have not been reported |
+| The review viewer, `viewer/index.html` | Teammate A | pull request 1, branch `task/viewer` | Open, not merged. The owner's review found no blocking bug and five small ones; they are not fixed yet. Not opened in a browser by the owner |
+| Country table check, clearance audit, demo on public lists | Teammate B | pull request 2, branch `task/data` | Open, not merged. Reviewed by a teammate at 13:31 and by the owner. The country check found one unresolved name, now fixed on `main`. The audit reports 16 of 16 sampled clearances supported; nobody has re-checked it row by row. One-part names are fixed on the branch (`9130199`). Two review findings are still open on the branch: a profile with several birth dates can turn the "different person" case into a match, and the default data folder is not the repo's `data/room/screening/dev` |
 | Model check, results table, demo script, submission text, video | Teammate C | branch `task/results`, not pushed yet | Handed off at 12:52. `tools/model_check.py` and `tools/ablate.py` are on `main`, so every job can start |
 
 The handoffs are `tasks/teammate-A-viewer.md`, `tasks/teammate-B-data.md` and
