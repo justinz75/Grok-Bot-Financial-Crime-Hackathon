@@ -39,11 +39,13 @@ class WatchlistDobRecovery(unittest.TestCase):
         self.folder.hit(self.alert, self.name, countries=("Germany",))
         row = self.folder.tables["hits"][0]
         first = {"result_id": "SR-1", "snippet": "A politically exposed person in Germany, born in 1982."}
-        second = {"result_id": "SR-2", "snippet": "A politically exposed person in Germany, born in 1983."}
+        second = {
+            "result_id": "SR-2", "snippet": "A politically exposed person in Germany, born on 14 June 1982.",
+        }
         store = SimpleNamespace(search_by_query={"mira selwick": [first], "mira q selwick": [first, second]})
         hit = build_hit(row, store)
         self.assertEqual(hit.dob_evidence, ["SR-1", "SR-2"])
-        self.assertEqual([date.year for date in hit.dobs], [1982, 1983])
+        self.assertEqual(hit.dobs, [(1982, None, None), (1982, 6, 14)])
 
     def test_wrapped_opening_paragraph_recovers_explicit_dob(self):
         hit = self.folder.hit(
@@ -98,3 +100,24 @@ class WatchlistDobRecovery(unittest.TestCase):
         self.assertEqual(line["decision"], "SAME_ENTITY", line["reason"])
         self.assertEqual(line["reason_code"], "NAME_LOCATION_MATCH")
         self.assertNotIn(hit + "#profile_notes", line["evidence"])
+
+    def test_recovered_conflicting_dob_does_not_clear_a_review(self):
+        profile_hit = self.folder.hit(
+            self.alert, self.name, countries=("Germany",),
+            notes="Mira Q Selwick served on the commission.\nDate of birth: 6 March 1962.",
+        )
+        search_hit = self.folder.hit(self.alert, self.name, countries=("Germany",))
+        self.folder.search("mira selwick", "A politically exposed person in Canada, born in 1982.")
+        self.folder.search("mira q selwick", "A politically exposed person in Germany, born in 1962.")
+        lines = self.folder.run()
+        for hit in (profile_hit, search_hit):
+            self.assertEqual(lines[hit]["decision"], "REVIEW", lines[hit]["reason"])
+
+    def test_new_profile_dob_cannot_remove_the_location_exception(self):
+        hit = self.folder.hit(
+            self.alert, self.name, countries=("Canada",),
+            notes="Mira Q Selwick served on the commission.\nDate of birth: 6 March 1962.",
+        )
+        self.folder.search("mira selwick", "A politically exposed person in Canada, born in 1982.")
+        line = self.folder.run()[hit]
+        self.assertEqual(line["decision"], "REVIEW", line["reason"])

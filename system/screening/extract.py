@@ -117,9 +117,16 @@ def birth_from_text(text, loose=False):
     return [], None
 
 
-def profile_birth(profile_notes):
+def profile_birth(profile_notes, opening_line_only=False):
     """Read birth facts from the opening prose, including wrapped lines."""
     opening = first_paragraph(profile_notes)
+    if opening_line_only:
+        # Retain the original extraction for the clearance comparison.
+        line = opening.splitlines()[0].strip() if opening else ""
+        if not line or len(line) > 400 or re.match(r"according\b", line, re.I):
+            return [], None
+        return birth_from_text(line)
+
     # A provider's structured record or a report belongs to a separate source.
     if re.match(r"name\s*:", opening, re.I):
         return [], None

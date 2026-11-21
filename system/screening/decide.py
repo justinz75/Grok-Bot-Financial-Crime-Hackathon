@@ -46,14 +46,16 @@ class Hit(object):
 
     def __init__(self, hit_id, kind, name, aliases=(), dobs=(), dob_origin=None,
                  dob_evidence=(), countries=(), unknown_countries=(),
-                 earliest_report=None, death=None):
+                 earliest_report=None, death=None, clearance_dobs=None):
         self.hit_id = hit_id
         self.kind = kind
         self.name = name
         self.names = [name] + [a for a in aliases if a]
         self.dobs = list(dobs)
         self.dob_origin = dob_origin              # 'listed', 'notes' or 'search'
-        self.dob_evidence = list(dob_evidence)    # search result IDs, when from search
+        self.dob_evidence = list(dob_evidence)
+        # Dates available before the recovery expansion define the clearance baseline.
+        self.clearance_dobs = self.dobs if clearance_dobs is None else list(clearance_dobs)
         self.countries = set(countries)
         self.unknown_countries = list(unknown_countries)
         self.earliest_report = earliest_report
@@ -153,13 +155,19 @@ def location_state(customer, hit):
     return "mismatch", shared
 
 
+def _dob_state(customer, hit):
+    dob = D.compare(customer.dob, hit.dobs)
+    clearance_dob = D.compare(customer.dob, hit.clearance_dobs)
+    if dob == "mismatch" and (not customer.dob_can_clear or clearance_dob != "mismatch"):
+        dob = "unknown"
+    return dob, clearance_dob
+
+
 def states(customer, hit, rules):
     """The three comparisons behind every decision, exactly as decide() makes them:
     name, dob and location are each 'agree', 'mismatch' or 'unknown'."""
     name, name_source = name_state(customer, hit, rules)
-    dob = D.compare(customer.dob, hit.dobs)
-    if dob == "mismatch" and not customer.dob_can_clear:
-        dob = "unknown"
+    dob, _ = _dob_state(customer, hit)
     location, shared = location_state(customer, hit)
     return {"name": name, "name_source": name_source, "dob": dob, "location": location, "shared": sorted(shared)}
 
@@ -200,9 +208,7 @@ def decide(customer, hit, rules):
                     "The customer was born in %d%s, so they were at most %d when the hit's profile reports activity on %s."
                     % (customer.dob.year, _cite(customer.dob_source), age, report), [customer.dob_source])
 
-    dob = D.compare(customer.dob, hit.dobs)
-    if dob == "mismatch" and not customer.dob_can_clear:
-        dob = "unknown"
+    dob, clearance_dob = _dob_state(customer, hit)
     if dob == "mismatch":
         subject = "The customer was incorporated on %s" if company else "The customer's date of birth is %s"
         grounds["DOB_MISMATCH"] = (
@@ -217,7 +223,9 @@ def decide(customer, hit, rules):
 
     location, shared = location_state(customer, hit)
     name_and_dob_agree = name == "agree" and dob == "agree"
-    if location == "mismatch" and not name_and_dob_agree:
+    # A new DOB source cannot remove the existing exception to location clearance.
+    baseline_agreement = name == "agree" and clearance_dob == "agree"
+    if location == "mismatch" and not (name_and_dob_agree or baseline_agreement):
         sources = [s for ids in customer.countries.values() for s in ids]
         grounds["LOCATION_MISMATCH"] = (
             "The customer is linked only to %s but the hit is linked only to %s."
@@ -254,12 +262,18 @@ def decide(customer, hit, rules):
         sentences = sentences[:2] + [
             "The screened details are unverified and belong to no known record, so they can "
             "neither clear nor confirm the hit and a person has to review it."]
-    elif location == "mismatch":  # name and date of birth agree, the countries do not
-        sentences.append(
-            "Every country tied to the customer (%s) differs from every country tied to the hit (%s), "
-            "and a country difference does not clear a hit whose name and date of birth agree, "
-            "so a person has to review it."
-            % (_country_names(customer.countries), _country_names(hit.countries)))
+    elif location == "mismatch":
+        if name_and_dob_agree:
+            sentences.append(
+                "Every country tied to the customer (%s) differs from every country tied to the hit (%s), "
+                "and a country difference does not clear a hit whose name and date of birth agree, "
+                "so a person has to review it."
+                % (_country_names(customer.countries), _country_names(hit.countries)))
+        else:
+            sentences.append(
+                "The customer's name agrees with the hit, but the birth-date sources give different results "
+                "and their countries differ, so a person has to review it.")
+            evidence += [customer.dob_source] + hit.dob_evidence
         evidence += [s for ids in customer.countries.values() for s in ids]
     else:
         missing = []
