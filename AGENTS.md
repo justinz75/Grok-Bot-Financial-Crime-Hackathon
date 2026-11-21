@@ -86,6 +86,7 @@ python ROOM/validate.py --data DATA --output output/dev.jsonl --score DATA/pract
 python tools/stress.py DATA                                        # reworded-text stress test
 python tools/loop.py DATA                                          # every check in order, and which hits a change moved
 python tools/ablate.py DATA --stress                               # compare every layer setting
+python tools/public_test.py                                        # known answers on a real public sanctions list
 ```
 
 On Windows use `py` in place of `python` if `python` opens the Microsoft Store. The results to

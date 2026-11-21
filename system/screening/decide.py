@@ -147,6 +147,21 @@ def name_state(customer, hit, rules):
     return "unknown", None
 
 
+def short_name_agrees(customer, hit, rules):
+    """True for a person whose names all have fewer than two real parts when one of them
+    still agrees with a name of the hit: every part of the shorter name matches. Such a
+    customer can be neither confirmed nor cleared on name, but the names do agree, and
+    that matters to the one rule that asks whether name and date of birth agree."""
+    if customer.kind == COMPANY:
+        return False
+    held = [customer.verified_name] + [name for name, _ in customer.names]
+    mine = [p for p in (rules.parts(n, False) for n in held if n) if p]
+    theirs = [p for p in (rules.parts(n, False) for n in hit.names) if p]
+    if not mine or not theirs or any(len(p) >= 2 for p in mine):
+        return False
+    return any(rules.agree(p, hp) for p in mine for hp in theirs)
+
+
 def mentioned_ties(customer, hit):
     """The hit's countries that a note about the customer mentions without tying the
     customer to them: a nationality word, or a note set aside as a failed check."""
@@ -261,9 +276,12 @@ def decide(customer, hit, rules):
         and not customer.unknown_countries and not hit.unknown_countries
         and customer.countries
     )
-    # A new DOB source cannot remove the existing exception to location clearance.
-    baseline_agreement = name == "agree" and clearance_dob == "agree"
-    if location == "mismatch" and not (name_and_dob_agree or baseline_agreement):
+    # A one-part name can stop a location clearance when either DOB comparison agrees.
+    short_name_match = (name == "unknown" and "agree" in (dob, clearance_dob)
+                        and short_name_agrees(customer, hit, rules))
+    short_agree = short_name_match and dob == "agree"
+    baseline_agreement = (name == "agree" or short_name_match) and clearance_dob == "agree"
+    if location == "mismatch" and not (name_and_dob_agree or short_agree or baseline_agreement):
         sources = [s for ids in customer.countries.values() for s in ids]
         grounds["LOCATION_MISMATCH"] = (
             "The customer is linked only to %s but the hit is linked only to %s."
@@ -288,6 +306,9 @@ def decide(customer, hit, rules):
         evidence += country_sources
     if name == "agree":  # agreement on name is stated, not cited: it rests on no single record
         sentences.append("The customer's name agrees with the hit's name %s." % hit.name.rstrip("."))
+    elif short_name_match and location == "mismatch":
+        sentences.append("The customer's name has fewer than two real parts, so it can neither confirm nor clear "
+                         "the hit, but what there is of it agrees with the hit's name %s." % hit.name.rstrip("."))
 
     if customer.confirmable:
         if company and name == "agree" and location == "agree":
@@ -317,7 +338,7 @@ def decide(customer, hit, rules):
         review_sources = country_ties + notes
     elif location == "mismatch":
         review_sources = country_ties
-        if name_and_dob_agree:
+        if name_and_dob_agree or short_agree:
             sentences.append(
                 "Every country tied to the customer (%s) differs from every country tied to the hit (%s), "
                 "and a country difference does not clear a hit whose name and date of birth agree, "

@@ -92,7 +92,9 @@ The details that matter:
   both sides give a month in the same year and the months or the days differ. One date on the
   hit that agrees is enough to stop this clearance.
 - **A country difference does not clear a hit whose name and date of birth both agree.** That
-  hit is `REVIEW`.
+  hit is `REVIEW`. A person's name with fewer than two real parts cannot confirm or clear, but
+  it still agrees when every part it has matches, so it counts here too
+  (`decide.py`: `short_name_agrees`).
 - **The customer's countries** are the residence and nationality on all their records, the
   country of the approved identity document, and the places the notes say they lived. Codes and
   nationalities count as countries. A territory is its own country.

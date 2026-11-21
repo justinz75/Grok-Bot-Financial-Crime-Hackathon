@@ -212,6 +212,16 @@ clears them, and the briefing says so plainly. 37 are date-of-birth clearances w
 or within the same year. In 218 the customer is several records treated as one person. None of
 this changes a decision; all of it is what an analyst would want to know.
 
+## Controls around the decision
+
+A bank that lets software clear alerts also has to order the open work, have a second person
+check the clearances, test the name matching and record what was run. `tools/assure.py` does
+that from one run and changes no decision. On the development set, 175 of the 440 alerts close
+with nobody opening them, 122 of the 464 clearances are picked for a second reader (73 for a
+risk flag and 49 by a fixed sample), and 187 of the 230 reviews wait for one fact: the listed
+person's date of birth. The tables, and what is still missing, are in
+[docs/assurance.md](../docs/assurance.md).
+
 ## Time and cost
 
 About 6 seconds for the development set (819 hits, 72,265 customer records) on a laptop, and about
@@ -261,6 +271,12 @@ Evidence: `CUS-783545`, `KYC-80B445`.
   real model: there was no API key when this was written. They stay off until
   `tools/ablate.py --runs 5` shows a real model is stable and creates no clearance.
 - **Date of death** is read from the hit's field only, not from prose.
+- **A date the system cannot read is treated as missing.** A birth year from another calendar,
+  such as 1340 or 1402, is not read as a date of birth. Every date field in the development set
+  is readable, so this has not mattered there.
+- **Name particles count as name parts.** Two unrelated names that share "al" and one other
+  part agree under the two-part rule. On the public list this confirmed a handful of unrelated
+  names that were given the listed person's date of birth.
 - **Names in other scripts** are compared as written; there is no transliteration beyond the
   variants file.
 - When in doubt the answer is `REVIEW`. One wrong clearance costs as much as twenty right ones save.
@@ -275,7 +291,7 @@ python -m unittest discover -s system/tests
 |---|---|
 | `test_rules.py` | Name, date and country rules, and the decision table |
 | `test_extract.py` | Reading notes, profile sentences, dated reports and search results |
-| `test_pipeline.py` | 27 whole-run cases the policy covers but the development set barely shows: joint accounts, family members sharing a phone, rejected checks, checks written only as notes, companies, a date of death, namesakes in search results, no record found |
+| `test_pipeline.py` | 30 whole-run cases the policy covers but the development set barely shows: joint accounts, family members sharing a phone, rejected checks, checks written only as notes, companies, a date of death, namesakes in search results, no record found |
 | `test_wording.py` | 15 whole-run cases of text that can be misread: capitals that are not the legal name, a year that is not a birth date, a country written as a nationality. None may clear a hit, and the controls check that a real check still does |
 | `test_layers.py` | The three layer guarantees |
 | `test_layer_*.py` | Each layer on its own |
@@ -294,3 +310,11 @@ change moved against the committed predictions and fails if one moved into a cle
 the practice labels, then runs the stress test and the five-run check. Last, when
 `data/public_demo` exists, it checks the public sanctions demo, whose answers are known by
 construction.
+
+`python tools/public_test.py` is the same idea at full size: every person and organisation on a
+real public sanctions list, each with invented customers whose right answer follows from how
+they were built. That is 232,142 hits, decided in 260.0 seconds with the layers off: 231,992 came out as
+built, 138 went to review instead, 12 to a match, and none was cleared that should not be.
+[docs/results.md](../docs/results.md) has the table and what the exceptions are. The run found
+one gap in the rules, closed since: a one-part name that agrees with the hit's, with an agreeing
+date of birth, was cleared on a country difference. It is a review.

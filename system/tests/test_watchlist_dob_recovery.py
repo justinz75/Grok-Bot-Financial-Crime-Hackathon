@@ -167,3 +167,18 @@ class WatchlistDobRecovery(unittest.TestCase):
         self.assertIn(hit + "#profile_notes", line["evidence"])
         self.assertIn(source, line["evidence"])
         self.assertIn(source, line["reason"])
+
+    def test_original_birth_date_still_blocks_location_clearance_with_a_one_part_name(self):
+        folder = Folder()
+        customer = folder.customer("Unknown Selwick", self.dob, country="Germany")
+        account = folder.field("accounts", "customer_id", customer, "account_id")
+        alert = folder.alert("Unknown Selwick", account=account)
+        hit = folder.hit(
+            alert, "Selwick", countries=("Canada",),
+            notes="Selwick served on the commission.\nDate of birth: 6 March 1962.",
+        )
+        source = folder.search("selwick", "A politically exposed person in Canada, born in 1982.")
+        line = folder.run()[hit]
+        self.assertEqual(line["decision"], "REVIEW", line["reason"])
+        self.assertIn("fewer than two real parts", line["reason"])
+        self.assertIn(source, line["evidence"])
