@@ -48,6 +48,18 @@ the decision, and it keeps free-text reading in one place where it can be tested
   A doubtful note in the identity-check channel keeps its place, because it is a newer real
   check, and an older check must not clear what a newer one may deny.
 - A country string that cannot be resolved blocks a location clearance.
+- The listed person's date of birth is also read from the rest of the opening paragraph of the
+  profile and from every search key, not only the first line and the first key (pull request
+  5, merged at 15:40). A date found only by that wider reading can support a match and can stop
+  a clearance. It never clears: a date-of-birth clearance still needs the narrow reading to
+  contradict the customer.
+- The country of a superseded identity document, and a country the notes only say the customer
+  travelled to, are weak evidence. They tie the customer to nothing, so they cannot confirm a
+  company, and they block a location clearance when the hit lists that country.
+- When several different people fit an alert, each is decided alone and the hit cites every
+  record any of them cites. The practice labels cite it that way: for the two labelled hits
+  with several candidates, the reference lists the identity checks behind each candidate as
+  well as the customer records.
 - A person's name with fewer than two real parts still agrees with a hit's name when the part
   it has matches. With the date of birth agreeing too, a country difference does not clear the
   hit. Added at 15:00 after the run on the public sanctions list, where 21 customers built as

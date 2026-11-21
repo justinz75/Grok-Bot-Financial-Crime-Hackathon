@@ -427,17 +427,24 @@ def combine(outcomes):
     REVIEW with AMBIGUOUS_CUSTOMER_RECORD. Either way the customer is AMBIGUOUS."""
     if len(outcomes) == 1:
         return outcomes[0]
+    # Each candidate is decided alone, and the hit cites everything any of them cites. The
+    # practice labels do the same: for a hit two people fit, the reference lists the identity
+    # checks behind each one's facts as well as their records.
+    evidence = [e for o in outcomes for e in o.evidence]
     decisions = sorted({o.decision for o in outcomes})
     if len(decisions) == 1:
         first = outcomes[0]
         shared_codes = [c for c in first.codes if all(c in o.codes for o in outcomes)]
         codes = shared_codes or first.codes
+        if first.decision != DIFFERENT and all(o.sentences == first.sentences for o in outcomes):
+            # the same facts hold for every candidate: state them once, as for one customer
+            return Outcome(first.decision, codes, first.sentences, evidence, AMBIGUOUS)
         selected = [None] * len(outcomes)
         if first.decision == DIFFERENT:
             selected = [shared_codes[0] if shared_codes else o.code for o in outcomes]
-        details, evidence = _candidate_facts(outcomes, selected, budget=3)
+        details, _ = _candidate_facts(outcomes, selected, budget=3)
         return Outcome(first.decision, codes, details, evidence, AMBIGUOUS)
     summary = "The candidates lead to different decisions (%s), so a person has to review the hit." % ", ".join(decisions)
-    details, evidence = _candidate_facts(outcomes, [o.code if o.decision == DIFFERENT else None
-                                                    for o in outcomes], budget=2)
+    details, _ = _candidate_facts(outcomes, [o.code if o.decision == DIFFERENT else None
+                                             for o in outcomes], budget=2)
     return Outcome(REVIEW, ["AMBIGUOUS_CUSTOMER_RECORD"], [summary] + details, evidence, AMBIGUOUS)

@@ -25,7 +25,8 @@ def _found_sentence(how, people):
     if not people:
         return "No customer record fits the %s, so only the screened details could be compared." % how
     if len(people) > 1:
-        return "%d different people fit the %s." % (len(people), how)
+        records = ", ".join(rid for group, _ in people for rid in group)
+        return "%d different people fit the %s (records %s)." % (len(people), how, records)
     group, first = people[0]
     others = [r for r in group if r != first]
     extra = ", and %s %s the same person" % (", ".join(others), "is" if len(others) == 1 else "are") if others else ""

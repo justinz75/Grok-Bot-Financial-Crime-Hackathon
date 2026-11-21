@@ -103,8 +103,11 @@ the facts that decided it:
 | Date of death | The hit's `deceased_date` field, written `H-xxxxxx#deceased_date` |
 
 The reason text opens with how the customer was found, then states the selected grounds with
-their values. The evidence list comes from those same grounds. When multiple candidates fit
-the alert, the reason states one decisive comparison per candidate within the four-sentence limit.
+their values. For one customer the evidence list comes from those same grounds. When several
+candidates fit the alert, each is decided alone. The reason states one decisive comparison per
+candidate within the four-sentence limit, or the shared facts once when every candidate rests
+on the same ones. The evidence is everything any candidate cites when decided alone, which is
+how the practice labels cite it.
 
 ## Staying the same from run to run
 
@@ -292,6 +295,9 @@ python -m unittest discover -s system/tests
 | `test_rules.py` | Name, date and country rules, and the decision table |
 | `test_extract.py` | Reading notes, profile sentences, dated reports and search results |
 | `test_pipeline.py` | 30 whole-run cases the policy covers but the development set barely shows: joint accounts, family members sharing a phone, rejected checks, checks written only as notes, companies, a date of death, namesakes in search results, no record found |
+| `test_watchlist_dob_recovery.py` | 12 cases on reading the listed person's date of birth from a wrapped opening paragraph and from every search key. A date found only that way may support a match or stop a clearance, and never clears |
+| `test_country_clearances.py` | 7 cases on country evidence: the latest approved document, a superseded one, a territory against its parent country, a residence in a note, a holiday |
+| `test_decision_evidence.py` | 6 cases checking that the scored reason and the cited records describe the same facts, for one customer and for several candidates |
 | `test_wording.py` | 15 whole-run cases of text that can be misread: capitals that are not the legal name, a year that is not a birth date, a country written as a nationality. None may clear a hit, and the controls check that a real check still does |
 | `test_layers.py` | The three layer guarantees |
 | `test_layer_*.py` | Each layer on its own |

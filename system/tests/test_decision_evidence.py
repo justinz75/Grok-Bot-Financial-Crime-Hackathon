@@ -75,7 +75,10 @@ class DecisionEvidenceTests(unittest.TestCase):
         self.assertEqual(line["decision"], "SAME_ENTITY")
         self.assertEqual(line["reason_code"], "NAME_DOB_MATCH")
         self.assertEqual(line["customer_record_id"], "AMBIGUOUS")
-        self.assertEqual(line["evidence"], sorted(checks))
+        # Each candidate is decided alone and the hit cites what any of them cites: the check
+        # behind every date of birth, and the records that tie three of them to Japan.
+        in_japan = [rid for (rid, _), country in zip(candidates, ("Japan", None, "Japan", "Japan")) if country]
+        self.assertEqual(line["evidence"], sorted(checks + in_japan))
         for rid, dob in candidates:
             self.assertIn("record %s, the name matches and birth dates agree (%s" % (rid, dob), line["reason"])
         self.assertEqual(line["reason"].count(". "), 3)
