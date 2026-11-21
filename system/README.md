@@ -208,6 +208,16 @@ clears them, and the briefing says so plainly. 37 are date-of-birth clearances w
 or within the same year. In 218 the customer is several records treated as one person. None of
 this changes a decision; all of it is what an analyst would want to know.
 
+## Controls around the decision
+
+A bank that lets software clear alerts also has to order the open work, have a second person
+check the clearances, test the name matching and record what was run. `tools/assure.py` does
+that from one run and changes no decision. On the development set, 175 of the 440 alerts close
+with nobody opening them, 122 of the 464 clearances are picked for a second reader (73 for a
+risk flag and 49 by a fixed sample), and 187 of the 230 reviews wait for one fact: the listed
+person's date of birth. The tables, and what is still missing, are in
+[docs/assurance.md](../docs/assurance.md).
+
 ## Time and cost
 
 About 6 seconds for the development set (819 hits, 72,265 customer records) on a laptop, and about
