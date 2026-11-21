@@ -24,10 +24,11 @@ class Customer(object):
     def __init__(self, kind, record_ids=(), verified_name=None, verified_source=None,
                  names=(), dob=None, dob_source=None, countries=None,
                  unknown_countries=(), screened_at=None, primary=None, dob_can_clear=True,
-                 confirmable=True):
+                 confirmable=True, name_can_clear=True):
         self.kind = kind
         self.dob_can_clear = dob_can_clear        # False when an identity check could not be read
         self.confirmable = confirmable            # False when no customer record was found
+        self.name_can_clear = name_can_clear      # False when the legal name was read by a model
         self.record_ids = sorted(record_ids)
         self.primary = primary or (self.record_ids[0] if self.record_ids else None)  # the record first found
         self.verified_name = verified_name        # legal name on the latest approved check
@@ -116,7 +117,8 @@ def name_state(customer, hit, rules):
         if len(parts) >= need:
             if any(rules.agree(parts, hp) for hp in hit_parts):
                 return "agree", customer.verified_source
-            return "mismatch", customer.verified_source
+            if customer.name_can_clear:
+                return "mismatch", customer.verified_source
     for name, source in customer.names:
         parts = rules.parts(name, company)
         if len(parts) >= need and any(rules.agree(parts, hp) for hp in hit_parts):
@@ -135,6 +137,17 @@ def location_state(customer, hit):
     if customer.unknown_countries or hit.unknown_countries:
         return "unknown", shared
     return "mismatch", shared
+
+
+def states(customer, hit, rules):
+    """The three comparisons behind every decision, exactly as decide() makes them:
+    name, dob and location are each 'agree', 'mismatch' or 'unknown'."""
+    name, name_source = name_state(customer, hit, rules)
+    dob = D.compare(customer.dob, hit.dobs)
+    if dob == "mismatch" and not customer.dob_can_clear:
+        dob = "unknown"
+    location, shared = location_state(customer, hit)
+    return {"name": name, "name_source": name_source, "dob": dob, "location": location, "shared": sorted(shared)}
 
 
 def decide(customer, hit, rules):

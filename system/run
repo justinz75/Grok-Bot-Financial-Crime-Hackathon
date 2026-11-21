@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
-"""Screening alert review.  Usage: system/run <data folder> <output file>
+"""Screening alert review.
 
-Reads only the data folder, writes one JSON line per hit. Python 3 standard library only.
+    system/run <data folder> <output file> [<explain file>]
+
+Reads only the data folder and writes one JSON line per hit. With a third argument (or
+the SCREENING_EXPLAIN environment variable) it also writes an explain file showing what
+each optional layer found. Python 3 standard library only.
 """
 import os
 import sys
@@ -12,14 +16,11 @@ from screening.pipeline import run  # noqa: E402
 
 
 def main(argv):
-    if len(argv) != 3:
-        sys.stderr.write("usage: system/run <data folder> <output file>\n")
+    if len(argv) not in (3, 4):
+        sys.stderr.write("usage: system/run <data folder> <output file> [<explain file>]\n")
         return 2
-    folder, output = argv[1], argv[2]
-    parent = os.path.dirname(os.path.abspath(output))
-    if not os.path.isdir(parent):
-        os.makedirs(parent)
-    run(folder, output)
+    explain = argv[3] if len(argv) == 4 else os.environ.get("SCREENING_EXPLAIN") or None
+    run(argv[1], argv[2], explain)
     return 0
 
 

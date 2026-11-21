@@ -71,9 +71,11 @@ class Screened(object):
 
 
 class Resolver(object):
-    def __init__(self, store):
+    def __init__(self, store, note_reader=None):
         self.store = store
         self.rules = store.rules
+        # how an identity check written as a note is read; the reader layer can replace it
+        self.read_note = note_reader or X.read_identity_note
         self._features = {}
         self._pools = None
         self.by_phone_dob = {}   # (phone digits, full date of birth) -> record IDs
@@ -256,11 +258,11 @@ class Resolver(object):
                 code = C.resolve(raw) if raw else C.IGNORED
                 checks.append((_order(D.parse_date(check.get("checked_at"))), text(check.get("check_id")),
                                text(check.get("verified_name")), D.parse_date(check.get("verified_dob")),
-                               [code] if code and code != C.IGNORED else [], raw if code is None else None))
+                               [code] if code and code != C.IGNORED else [], raw if code is None else None, False))
             for note in store.notes_of(rid):
                 note_id, body = text(note.get("note_id")), text(note.get("text"))
                 looks_like_check = key(note.get("channel")) == "kyc"
-                got = X.read_identity_note(body, note.get("created_at"), is_check=looks_like_check)
+                got = self.read_note(body, note.get("created_at"), is_check=looks_like_check)
                 if got is None:
                     unread_check = unread_check or looks_like_check
                     # a place the notes say they lived; for a check that could not be
@@ -269,15 +271,19 @@ class Resolver(object):
                         tie(code, note_id)
                 elif got["approved"]:
                     checks.append((_order(D.parse_date(note.get("created_at"))), note_id,
-                                   got["name"] or "", got["dob"], got["countries"], None))
+                                   got.get("name") or "", got.get("dob"), got.get("countries") or [], None,
+                                   bool(got.get("soft"))))
         if screened.name:
             names.append((screened.name, None))
 
         verified_name = verified_source = None
         dob = dob_source = None
+        soft_source = None  # a check read by the model in its cautious mode: supports, never clears
         if checks:
             latest = max(checks, key=lambda item: (item[0], item[1]))
             verified_name, verified_source = latest[2] or None, latest[1]
+            if latest[6]:
+                soft_source = latest[1]
             if latest[3]:
                 dob, dob_source = latest[3], latest[1]
             for code in latest[4]:
@@ -299,8 +305,11 @@ class Resolver(object):
         # An identity check exists but could not be read: the declared date of birth may
         # not be the verified one, so it can agree with a hit but must not clear one.
         dob_can_clear = not (unread_check and dob_source not in [c[1] for c in checks])
+        if soft_source is not None and dob_source == soft_source:
+            dob_can_clear = False
         return Customer(kind, group, verified_name, verified_source, names, dob, dob_source,
-                        countries, unknown, screened.at, primary=first, dob_can_clear=dob_can_clear)
+                        countries, unknown, screened.at, primary=first, dob_can_clear=dob_can_clear,
+                        name_can_clear=soft_source is None)
 
     def screened_only(self, screened):
         """No record fits: the screened details are all there is. They are declared,
