@@ -44,6 +44,11 @@ def select_people(csv_path):
     return people
 
 
+def latest(dobs):
+    # Dates may be a year, a year and month, or a full date: compare them part by part.
+    return max(dobs, key=lambda dob: tuple(int(part) for part in dob.split("-")))
+
+
 def twenty_years_later(dob):
     # OpenSanctions can give a year, a year and month, or a full ISO date.
     parts = dob.split("-")
@@ -64,7 +69,10 @@ def build_tables(people):
         countries = split_values(person["countries"].upper())
         country = countries[0]
 
-        for offset, dob in enumerate((dobs[0], twenty_years_later(dobs[0]), None)):
+        # The "different person" customer is born twenty years after the latest date the
+        # profile lists. Shifting the first date could land on another listed date, and
+        # the customer would then match the profile instead of contradicting it.
+        for offset, dob in enumerate((dobs[0], twenty_years_later(latest(dobs)), None)):
             serial = index * 3 + offset
             suffix = f"{0xA1 + serial:06X}"
             alert_id = f"A-{suffix}"
@@ -104,9 +112,18 @@ def build_tables(people):
     return tables
 
 
+def default_dev_dir():
+    # AGENTS.md keeps the data room at data/room/screening/dev. data/screening/dev is
+    # accepted too, for a checkout that has no room/ folder.
+    for folder in (DATA / "room" / "screening" / "dev", DATA / "screening" / "dev"):
+        if (folder / "name_variants.json").is_file():
+            return folder
+    return DATA / "room" / "screening" / "dev"
+
+
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--dev-dir", type=Path, default=DATA / "screening" / "dev",
+    parser.add_argument("--dev-dir", type=Path, default=default_dev_dir(),
                         help="screening dev folder containing name_variants.json")
     args = parser.parse_args()
     out = DATA / "public_demo"

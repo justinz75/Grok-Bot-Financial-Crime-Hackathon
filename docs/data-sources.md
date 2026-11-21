@@ -13,9 +13,9 @@ snapshot can select different profiles.
 ## Run locally
 
 From the repository root, create `data/public/` and save the two CSV files there using the
-filenames above. Put or link the local `screening/dev` folder at `data/screening/dev`, or pass
-`--dev-dir /path/to/screening/dev` to the generator. It copies `name_variants.json` from that
-folder.
+filenames above. The generator copies `name_variants.json` from the local `screening/dev` folder.
+It looks for that folder at `data/room/screening/dev`, where `AGENTS.md` keeps it, and then at
+`data/screening/dev`. For any other place pass `--dev-dir /path/to/screening/dev`.
 
 ```sh
 python tools/check_countries.py data/public/iso3166.csv
@@ -26,9 +26,11 @@ python system/run data/public_demo output/public_demo.jsonl
 The demo takes the first six eligible person profiles in ID order and uses the first listed
 birth date and country to populate each set of invented customer records. Each profile is copied
 into one hit per alert, since the runner emits one decision per hit. In each set of three output
-lines the customers have, in order, the matching birth date, a birth date twenty years later,
-and a missing birth date. A profile is eligible when it is a person with a birth date, a country
-and a name of at least two real parts: the policy cannot confirm a person on a one-part name. The shifted date retains its original precision and uses February 28
-if February 29 is unavailable in the destination year.
+lines the customers have, in order, the matching birth date, a birth date twenty years after the
+latest one the profile lists, and a missing birth date. Shifting the latest date keeps that
+customer outside every date of a profile that lists several. A profile is eligible when it is a person with a birth date, a country
+and a name of at least two real parts: the policy cannot confirm a person on a one-part name.
+The shifted date retains its original precision and uses February 28 if February 29 is
+unavailable in the destination year.
 
 Keep the downloaded lists, generated data and demo output local.
