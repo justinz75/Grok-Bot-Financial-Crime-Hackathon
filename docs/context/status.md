@@ -1,7 +1,7 @@
 # Where things stand
 
 **Snapshot: 14:31 London time, 21 November 2026. The decision code under `system/screening/` last
-changed at the merge of pull request 3.**
+changed at commit `10b7575`, the merge of pull request 3.**
 
 This page goes out of date quickly. The live picture is always in git:
 
@@ -16,7 +16,7 @@ If you change the state of a task, update this page in the same pull request.
 ## Numbers to expect
 
 The tests, the run, the validator, the practice-label score, the five-run check and the stress
-test below were run on the merge of pull request 3, which is the decision code named above. The
+test below were run at `10b7575`, the merge of pull request 3. The
 country check and the workflow line are from the commits they name. If you see something
 different, stop and report it.
 
@@ -65,7 +65,7 @@ The stress test and the layer comparison are reported in [system/README.md](../.
 | The five-run reproducibility check `tools/repro.py` and the test workflow `.github/workflows/tests.yml` (task 03) | `9ae3d90` |
 | Country names the official list writes back to front, found by Teammate B's country check | `e3cf06a` |
 | A numeric date that can be read two ways (day first or month first) no longer clears a hit unless both readings contradict it, with 14 tests. It changed no decision on the development set | `7259c05` |
-| Pull request 3: a check read out of a note clears a hit only when the note can be believed, a country a support note only mentions blocks a location clearance against it, 15 wording tests, five stress cases that add misleading text, and `tools/loop.py`. On the development set it changed no decision and the wording of one reason, so `output/dev.jsonl` was regenerated in the merge | the merge of `61e90ab` |
+| Pull request 3: a check read out of a note clears a hit only when the note can be believed, a country a support note only mentions blocks a location clearance against it, 15 wording tests, five stress cases that add misleading text, and `tools/loop.py`. On the development set it changed no decision and the wording of one reason, so `output/dev.jsonl` was regenerated in the merge | `10b7575` |
 | Teammate B's demo on public sanctions lists, `tools/make_public_demo.py` and `docs/data-sources.md` (pull request 2), with the three review fixes | `dedc2f7` |
 | Teammate A's review viewer, `viewer/index.html` (pull request 1), with the five review fixes | `395a9af` |
 | The viewer redesign: a built-in sample made by the real system (`tools/make_viewer_sample.py`, 4 tests), side-by-side cards, a review queue | `dcc67c1` |
