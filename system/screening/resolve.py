@@ -30,6 +30,10 @@ DOUBTFUL_NOTES_NEVER_CLEAR = True
 # that one country: missing a place the customer lived would clear a hit that should not
 # clear. Set to False to measure what the rule costs.
 MENTIONED_COUNTRIES_BLOCK = True
+# A note in the identity-check channel that reads as a failed check is not evidence. A
+# check that passed can read that way too, so the date of birth the bank declared may
+# then agree with a hit and never clear one. Set to False to measure what the rule costs.
+FAILED_CHECK_NOTES_NEVER_CLEAR = True
 NAME_FIELDS = ("full_name", "preferred_name", "login_name")
 COUNTRY_FIELDS = ("residence_country", "nationality")
 
@@ -296,8 +300,13 @@ class Resolver(object):
                     continue  # rejected or expired checks are not evidence
                 raw = text(check.get("document_country"))
                 code = C.resolve(raw) if raw else C.IGNORED
+                verified_dob = D.parse_date(check.get("verified_dob"))
+                if verified_dob is None and text(check.get("verified_dob")):
+                    # the check gives a date of birth that cannot be read: the declared
+                    # date may differ from it, so it must not clear a hit
+                    unread_check = True
                 checks.append((_order(D.parse_date(check.get("checked_at"))), text(check.get("check_id")),
-                               text(check.get("verified_name")), D.parse_date(check.get("verified_dob")),
+                               text(check.get("verified_name")), verified_dob,
                                [code] if code and code != C.IGNORED else [], raw if code is None else None,
                                False, False))
             for note in store.notes_of(rid):
@@ -322,6 +331,16 @@ class Resolver(object):
                     checks.append((_order(D.parse_date(note.get("created_at"))), note_id,
                                    got.get("name") or "", got.get("dob"), got.get("countries") or [], None,
                                    bool(got.get("soft")) or doubtful, doubtful and not looks_like_check))
+                elif looks_like_check and FAILED_CHECK_NOTES_NEVER_CLEAR:
+                    # An identity check that reads as failed is not evidence, and nothing it
+                    # says is used. But a check that passed can read as failed ("the document
+                    # expires in 2031"), and then what the bank verified is unknown: the
+                    # declared date of birth may still agree with a hit and must not clear
+                    # one, and the countries the note names stop a location clearance against
+                    # them without tying the customer to them.
+                    unread_check = True
+                    if (note_id, body) not in mentioned:
+                        mentioned.append((note_id, body))
         if screened.name:
             names.append((screened.name, None))
 
@@ -365,6 +384,15 @@ class Resolver(object):
         dob_can_clear = not (unread_check and dob_source not in [c[1] for c in checks])
         if soft_source is not None and dob_source == soft_source:
             dob_can_clear = False
+        # Up to here the date may not clear for one reason only: a check gives a date of
+        # birth that could not be read with confidence, so the date held here may not be
+        # the one the bank verified. That verified date may agree with a hit's, and a
+        # country difference does not clear a hit whose name and date of birth agree.
+        dob_in_doubt = not dob_can_clear
+        if dob is not None and dob_source is None:
+            # only the alert gives the date: it is unverified and no record backs it, so it
+            # may agree with a hit and must not clear one, as when no record is found at all
+            dob_can_clear = False
         possible = {}  # code -> notes that mention the country without tying the customer to it
         for note_id, body in (mentioned if MENTIONED_COUNTRIES_BLOCK else []):
             for code in C.find_in_text(body, demonyms=True):
@@ -372,7 +400,8 @@ class Resolver(object):
                     possible[code].append(note_id)
         return Customer(kind, group, verified_name, verified_source, names, dob, dob_source,
                         countries, unknown, screened.at, primary=first, dob_can_clear=dob_can_clear,
-                        name_can_clear=soft_source is None, possible_countries=possible)
+                        name_can_clear=soft_source is None, possible_countries=possible,
+                        dob_in_doubt=dob_in_doubt)
 
     def screened_only(self, screened):
         """No record fits: the screened details are all there is. They are declared,

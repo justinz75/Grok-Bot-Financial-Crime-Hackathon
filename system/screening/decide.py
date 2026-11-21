@@ -24,9 +24,10 @@ class Customer(object):
     def __init__(self, kind, record_ids=(), verified_name=None, verified_source=None,
                  names=(), dob=None, dob_source=None, countries=None,
                  unknown_countries=(), screened_at=None, primary=None, dob_can_clear=True,
-                 confirmable=True, name_can_clear=True, possible_countries=None):
+                 confirmable=True, name_can_clear=True, possible_countries=None, dob_in_doubt=False):
         self.kind = kind
         self.dob_can_clear = dob_can_clear        # False when an identity check could not be read
+        self.dob_in_doubt = dob_in_doubt          # True when a check gives a date that could not be read with confidence
         self.confirmable = confirmable            # False when no customer record was found
         self.name_can_clear = name_can_clear      # False when the legal name was read by a model, or from a note that cannot be believed
         self.possible_countries = dict(possible_countries or {})  # code -> notes that only mention it
@@ -47,12 +48,13 @@ class Hit(object):
 
     def __init__(self, hit_id, kind, name, aliases=(), dobs=(), dob_origin=None,
                  dob_evidence=(), countries=(), unknown_countries=(),
-                 earliest_report=None, death=None):
+                 earliest_report=None, death=None, unread_dobs=()):
         self.hit_id = hit_id
         self.kind = kind
         self.name = name
         self.names = [name] + [a for a in aliases if a]
         self.dobs = list(dobs)
+        self.unread_dobs = list(unread_dobs)      # listed dates that could not be read, as written
         self.dob_origin = dob_origin              # 'listed', 'notes' or 'search'
         self.dob_evidence = list(dob_evidence)    # search result IDs, when from search
         self.countries = set(countries)
@@ -161,14 +163,47 @@ def location_state(customer, hit):
     return "mismatch", shared
 
 
-def _location(customer, hit, name, dob):
-    """location_state, with one more caution. A country difference that would clear the
-    hit is 'unknown' when a note about the customer mentions one of the hit's countries.
-    Nothing else changes: where name and date of birth agree, a country difference never
-    cleared, so a mention has nothing to block and the difference stands."""
+def unread_dobs(hit):
+    """The dates the hit lists that could not be read, as written."""
+    return list(getattr(hit, "unread_dobs", None) or [])
+
+
+def dob_state(customer, hit):
+    """'agree' when one of the hit's dates agrees, 'mismatch' when every one is
+    contradicted, otherwise 'unknown'. A contradiction counts only when the customer's
+    date may clear and every date the hit lists was read: an unread one may be the date
+    that agrees."""
+    dob = D.compare(customer.dob, hit.dobs)
+    if dob == "mismatch" and (not customer.dob_can_clear or unread_dobs(hit)):
+        return "unknown"
+    return dob
+
+
+def dates_may_agree(customer, hit):
+    """True when the two dates of birth cannot be said to differ because one of them could
+    not be read: the hit lists a date that could not be read, or a check gives the
+    customer a date that could not be read with confidence, so the date held here may
+    not be the one the bank verified."""
+    if unread_dobs(hit) and customer.dob:
+        return True
+    return bool((hit.dobs or unread_dobs(hit)) and getattr(customer, "dob_in_doubt", False))
+
+
+def _location(customer, hit, name, dob, rules):
+    """location_state, with two more cautions. A country difference that would clear the
+    hit is 'unknown' when a note about the customer mentions one of the hit's countries,
+    and when the name agrees and the dates of birth may agree: a country difference does
+    not clear a hit whose name and date of birth agree. A name with fewer than two real
+    parts counts as agreeing here when what there is of it matches. Nothing else changes:
+    where name and date of birth agree, a country difference never cleared, so there is
+    nothing to block and the difference stands."""
     location, shared = location_state(customer, hit)
-    if location == "mismatch" and not (name == "agree" and dob == "agree") and mentioned_ties(customer, hit):
-        return "unknown", shared
+    if location == "mismatch" and not (name == "agree" and dob == "agree"):
+        if mentioned_ties(customer, hit):
+            return "unknown", shared
+        if dates_may_agree(customer, hit) and (
+                name == "agree" or (name == "unknown" and short_name_agrees(customer, hit, rules))):
+            return "unknown", shared
     return location, shared
 
 
@@ -176,10 +211,8 @@ def states(customer, hit, rules):
     """The three comparisons behind every decision, exactly as decide() makes them:
     name, dob and location are each 'agree', 'mismatch' or 'unknown'."""
     name, name_source = name_state(customer, hit, rules)
-    dob = D.compare(customer.dob, hit.dobs)
-    if dob == "mismatch" and not customer.dob_can_clear:
-        dob = "unknown"
-    location, shared = _location(customer, hit, name, dob)
+    dob = dob_state(customer, hit)
+    location, shared = _location(customer, hit, name, dob, rules)
     return {"name": name, "name_source": name_source, "dob": dob, "location": location, "shared": sorted(shared)}
 
 
@@ -219,9 +252,7 @@ def decide(customer, hit, rules):
                     "The customer was born in %d%s, so they were at most %d when the hit's profile reports activity on %s."
                     % (customer.dob.year, _cite(customer.dob_source), age, report), [customer.dob_source])
 
-    dob = D.compare(customer.dob, hit.dobs)
-    if dob == "mismatch" and not customer.dob_can_clear:
-        dob = "unknown"
+    dob = dob_state(customer, hit)
     if dob == "mismatch":
         subject = "The customer was incorporated on %s" if company else "The customer's date of birth is %s"
         grounds["DOB_MISMATCH"] = (
@@ -234,7 +265,7 @@ def decide(customer, hit, rules):
             "The customer's verified name is %s%s, which does not match the hit's name %s."
             % (customer.verified_name, _cite(name_source), hit.name.rstrip(".")), [name_source])
 
-    location, shared = _location(customer, hit, name, dob)
+    location, shared = _location(customer, hit, name, dob, rules)
     # a note mentions one of the hit's countries, and that alone is why the difference does not clear
     mentioned = mentioned_ties(customer, hit) if location != location_state(customer, hit)[0] else []
     name_and_dob_agree = name == "agree" and dob == "agree"
@@ -294,6 +325,14 @@ def decide(customer, hit, rules):
             sentences.append("A note about the customer (%s) mentions %s, a country tied to the hit, "
                              "so the countries cannot be said to differ." % (", ".join(notes), _country_names(mentioned)))
             evidence += notes
+        unread = unread_dobs(hit)
+        a_date = "an incorporation date" if company else "a date of birth"
+        if unread and customer.dob and dob != "agree":
+            sentences.append("The hit lists %s that could not be read (%s), so its dates cannot be said to "
+                             "contradict the customer's." % (a_date, ", ".join(unread)))
+        elif (hit.dobs or unread) and dob != "agree" and getattr(customer, "dob_in_doubt", False):
+            sentences.append("A check on file gives the customer %s that could not be read with confidence, "
+                             "so it cannot be said to differ from the hit's." % a_date)
         missing = []
         if name != "agree":
             missing.append("the name cannot be matched to the hit")

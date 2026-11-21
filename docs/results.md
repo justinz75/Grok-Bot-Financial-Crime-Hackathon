@@ -156,8 +156,8 @@ the one that must be 0: a hit that was a review or a match and became a clearanc
 case                                     same  to rev.    other  NEW CLEAR
 names in Title Case                       783       25       11          0
 names in lower case                       784       24       11          0
-Title Case, no birth words                739       69       11          0
-checks say nothing                        739       69       11          0
+Title Case, no birth words                737       71       11          0
+checks say nothing                        737       71       11          0
 checks filed under another channel        819        0        0          0
 ages reworded                             819        0        0          0
 countries reworded                        819        0        0          0

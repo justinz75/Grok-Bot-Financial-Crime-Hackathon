@@ -32,7 +32,7 @@ the decision, and it keeps free-text reading in one place where it can be tested
 
 ## 3. When something cannot be read, it is unknown, and unknown means review
 
-**Decided** 12:03, widened 12:35, 13:20 and 14:05.
+**Decided** 12:03, widened 12:35, 13:20, 14:05 and 15:10.
 
 - A note the reader cannot read gives no fact. It does not give a guess.
 - An identity check that is found but whose date of birth cannot be read does not let the
@@ -57,6 +57,18 @@ the decision, and it keeps free-text reading in one place where it can be tested
   failed check, blocks a location clearance against that country. It is not a shared country.
 - A customer who cannot be found in the system of record cannot be cleared or confirmed on the
   screened details.
+- A date a hit lists that cannot be read is unknown, not absent. The dates that could be read
+  may agree with the customer's and may not clear, and where the name agrees a country
+  difference does not clear either. Added at 15:10: the unread date may be the one that agrees.
+- The provider's verified date of birth that cannot be read, and a note in the identity-check
+  channel that reads as a failed check, both leave the verified date unknown: the declared date
+  may agree with a hit and may not clear one. A check that passed can read as failed when it
+  mentions the document's expiry date. The rules cannot tell that note from a truly rejected
+  check, so a truly rejected one now costs the declared date its power to clear.
+- Where a check gives the customer a date of birth that could not be read with confidence, the
+  hit gives a date and the name agrees, a country difference does not clear: the verified date
+  may agree with the hit's, and that hit is a review by the policy.
+- A date of birth that only the alert gives may agree with a hit and may not clear one.
 - A hit that crashes the run still gets a `REVIEW` line.
 
 **Why.** The unseen set words its free text differently. Reading less must be able to cost a

@@ -69,5 +69,10 @@ in [context/decisions.md](context/decisions.md), section 3.
 | A country a support note only mentions blocks a clearance against that country | `decide.py`: `mentioned_ties` | `test_wording.py`: `test_a_nationality_word_in_a_support_note` |
 | A country string that cannot be resolved blocks a location clearance | `decide.py`: `location_state` | `test_rules.py`: `test_unreadable_country_blocks_location_clearance` |
 | A numeric date that reads two ways clears only when both readings contradict | `dates.py`: `contradicts` | `test_ambiguous_dates.py`: `test_contradicted_only_when_both_readings_are` |
+| A date a hit lists that cannot be read does not let the dates that were read, or a country difference, clear the hit | `dates.py`: `unread_dates`; `decide.py`: `dob_state`, `dates_may_agree` | `test_unreadable.py`: `test_the_dates_that_can_be_read_do_not_clear`, `test_a_date_found_elsewhere_does_not_clear_either` |
+| A verified date of birth that cannot be read does not let the declared date clear a hit | `resolve.py`: `picture` | `test_unreadable.py`: `test_the_declared_date_does_not_clear` |
+| A note in the identity-check channel that reads as a failed check does not let the declared date clear a hit | `resolve.py`: `picture` | `test_unreadable.py`: `test_an_expiry_date_does_not_let_the_declared_date_clear`, `test_its_country_blocks_a_location_clearance_and_does_not_confirm` |
+| Where a check's date of birth could not be read with confidence, a country difference does not clear a hit that gives a date | `decide.py`: `dates_may_agree` | `test_unreadable.py`: `test_a_country_difference_does_not_clear_either` |
+| A date of birth that only the alert gives does not clear a hit | `resolve.py`: `picture` | `test_unreadable.py`: `test_the_screened_date_does_not_clear` |
 | With no customer record, the screened details neither clear nor confirm | `resolve.py`: `screened_only` | `test_pipeline.py`: `test_08_no_record_fits` |
 | A hit the system fails on is written as a review, never dropped | `pipeline.py`: `_unprocessed` | `test_pipeline.py`: `test_25_a_hit_whose_alert_is_missing_goes_to_review` |

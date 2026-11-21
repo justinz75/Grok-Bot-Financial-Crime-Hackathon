@@ -1,7 +1,7 @@
 # Where things stand
 
-**Snapshot: 15:15 London time, 21 November 2026. The decision code under `system/screening/` last
-changed at commit `73ed186`.**
+**Snapshot: 15:24 London time, 21 November 2026. The decision code under `system/screening/` last
+changed in the commit that adds `system/tests/test_unreadable.py`.**
 
 This page goes out of date quickly. The live picture is always in git:
 
@@ -22,9 +22,9 @@ different, stop and report it.
 
 | Command | What it printed |
 |---|---|
-| `python -m unittest discover -s system/tests` | `Ran 208 tests`, `OK` |
+| `python -m unittest discover -s system/tests` | `Ran 243 tests`, `OK` |
 | `python tools/make_viewer_sample.py --check` | `the sample is up to date` |
-| `python system/run DATA <file>` | `819 hits decided in 6.9s: DIFFERENT_ENTITY 464, REVIEW 230, SAME_ENTITY 125` |
+| `python system/run DATA <file>` | `819 hits decided in 7.3s: DIFFERENT_ENTITY 464, REVIEW 230, SAME_ENTITY 125` |
 | the same run, second line | `layers: score=on, reviewer=off, briefing=on, reader=off` |
 | the run twice, files compared | byte-identical |
 | a fresh run compared with the committed `output/dev.jsonl` | byte-identical |
@@ -35,7 +35,7 @@ different, stop and report it.
 | the scored file's SHA-256, from the same command | `c23adcc75543dca9c8534cfe3b613edfa28a0e4921856885596c610dd9e97bc1` |
 | `python tools/stress.py DATA` | 14 cases, `NEW CLEAR` 0 on every row, ending `new clearances caused by harder text: none`. The five cases that add misleading text printed 129, 10, 28, 41 and 40 before pull request 3, and 0, 0, 2, 0, 0 at its merge |
 | `python tools/loop.py DATA` | all six steps `PASS`, exit code 0: `0 of 819 hits changed decision or reason code, 0 moved into DIFFERENT_ENTITY, 0 changed only in reason or evidence`, and `18 of 18 demo cases came out as built` |
-| `python tools/public_test.py --people 30000 --companies 30000` on the same export | `sampled: 22772 people (21 with a one-part name) and 24265 organisations, 232142 hits, decided in 260.0s`, then `231992 of 232142 came out as built; 138 went to review instead, 12 to a match` and `cleared when it should not be: 0` |
+| `python tools/public_test.py --people 30000 --companies 30000` on the same export | `sampled: 22772 people (21 with a one-part name) and 24265 organisations, 232142 hits, decided in 260.0s`, then `231992 of 232142 came out as built; 138 went to review instead, 12 to a match` and `cleared when it should not be: 0`. Run again on the commit named above, with other jobs running beside it: `decided in 291.3s`, and the same table row for row |
 | `python tools/make_public_demo.py` on the OpenSanctions export in [data-sources.md](../data-sources.md), SHA-256 checked | `Wrote 18 demo cases from 6 OpenSanctions profiles` |
 | `python tools/assure.py DATA`, at `ada0873` | exit code 0. `440 alerts with 819 hits`: 175 `CLOSED`, 157 `REVIEW`, 108 `ESCALATE`. `355 hits need a person: 230 reviews and 125 matches`, of which 25 are P1, 109 P2, 4 P3 and 217 P4. Of the 464 clearances, 73 are flagged and 49 sampled for a second reader, 122 in all. The scored file it reports has the SHA-256 above. The tables are in [assurance.md](../assurance.md) |
 | `python -m unittest discover -s tools/tests`, at `ada0873` | `Ran 28 tests`, `OK`. They test the assurance tool. The workflow compiles `tools/` and runs only `system/tests`, so it does not run them |
@@ -76,6 +76,7 @@ The stress test and the layer comparison are reported in [system/README.md](../.
 | `tools/public_test.py`: the system run on every person and organisation of a real public sanctions list, with answers known by construction. Results in [results.md](../results.md) | `73ed186` |
 | The traceability matrix, [traceability.md](../traceability.md) (task 05): 31 rules, each with its code and tests, no gaps | `73ed186` |
 | The results page, [results.md](../results.md): the layer comparison, the stress test and the public-list test, as the commands printed them | `73ed186` |
+| A value that cannot be read no longer clears a hit: one of the dates a hit lists, the provider's verified date of birth, a note in the identity-check channel that reads as a failed check, and a date of birth only the alert gives. Where a check's date of birth could not be read with confidence, a country difference no longer clears a hit that gives a date. 35 tests in `system/tests/test_unreadable.py`. It changed nothing in `output/dev.jsonl`, in the explain file or in the public-list table. In the stress test it sends 2 more hits to review in each of two rows, `Title Case, no birth words` and `checks say nothing` | the commit that adds `system/tests/test_unreadable.py` |
 | Teammate B's demo on public sanctions lists, `tools/make_public_demo.py` and `docs/data-sources.md` (pull request 2), with the three review fixes | `dedc2f7` |
 | Teammate A's review viewer, `viewer/index.html` (pull request 1), with the five review fixes | `395a9af` |
 | The viewer redesign: a built-in sample made by the real system (`tools/make_viewer_sample.py`, 4 tests), side-by-side cards, a review queue | `dcc67c1` |

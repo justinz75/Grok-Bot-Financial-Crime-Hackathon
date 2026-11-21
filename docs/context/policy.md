@@ -74,6 +74,9 @@ customer is the worst mistake there is.
   a source, then a date written as month, day and year, then the report. Other wordings do not
   count. The form is in `extract.py`: `dated_reports`.
 - **Companies:** only the `dobs` field is an incorporation date.
+- **Dates inside a hit's profile** are written as the provider wrote them, so a numeric date
+  may be month first. `dates.py` reads `6/20/1955` as 20 June, the only way it can be read, and
+  treats `04/03/1980` as a date that reads either way round.
 
 ### 6. The five contradictions
 
@@ -150,6 +153,23 @@ These are deliberate. Each one can cost a review and can never cost a clearance.
 | A legal name or a date of birth was read by a model and not by the rules | It may support a match but may not clear, unless the reader is set to `enforce` | `Customer.name_can_clear`, `Customer.dob_can_clear` |
 | A hit cannot be processed at all | It gets a `REVIEW` line, never a silent clearance | `pipeline.py`: `_unprocessed` |
 | A numeric date reads either way round, such as 04/03/1980 | It is read day first for agreement, as before. A date-of-birth contradiction, a date of death before screening and a report before a company's incorporation must hold under both readings to clear | `dates.py`: `readings`, `contradicts`, `surely_before` |
+| One of the dates a hit lists cannot be read | It is kept as unknown, not dropped. The dates that could be read may still agree with the customer's but may not clear, and a date found in the notes or the search results may not clear in its place. Where the name agrees, a country difference does not clear either: the unread date may be the one that agrees. A year no date here can have, such as 1340 from another calendar, cannot agree and takes no part, as before | `dates.py`: `unread_dates`; `decide.py`: `dob_state`, `dates_may_agree` |
+| The provider's verified date of birth cannot be read | The declared date of birth may still agree with a hit, but it may not clear one | `resolve.py`: `Resolver.picture` |
+| A note in the identity-check channel reads as a failed check | Nothing it says is used, as before. A check that passed can read that way too, for example when it gives the document's expiry date, so the declared date of birth may still agree with a hit but may not clear one, and a country the note names blocks a location clearance against that country | `resolve.py`: `FAILED_CHECK_NOTES_NEVER_CLEAR` |
+| A check gives the customer a date of birth that could not be read with confidence (any of the rows about checks above), the hit gives a date, and the name agrees | A country difference does not clear the hit: the date the bank verified may agree with the hit's, and a country difference does not clear a hit whose name and date of birth agree | `Customer.dob_in_doubt`; `decide.py`: `dates_may_agree` |
+| The customer's only date of birth is the one on the alert | It may agree with a hit, but it may not clear one: no record backs it. A country difference still clears, because no check is hiding another date | `resolve.py`: `Resolver.picture` |
+| The customer's age at the earliest dated report | It is worked out from the birth year alone, so a customer aged 15 on the day and 16 by birth year is not cleared | `decide.py`: `decide`, `MIN_AGE` |
+| A date of death | Only the hit's `deceased_date` field is read, not the profile text | `watchlist.py`: `build_hit` |
+
+## Where our code reads the policy more narrowly
+
+Two readings are narrower than the policy's words. Neither is purely stricter, so they are
+listed apart from the table above.
+
+| The policy says | What the code does | What it can cost |
+|---|---|---|
+| A hit's date of birth may be given by a sentence in the first paragraph of its profile notes | `extract.py`: `profile_birth` reads only the opening line of that paragraph. A date on a later line is missed, and the search results are used in its place | The search results give two possible years where the profile gives a full date, so a customer born in the same year and another month can be matched where the full date would clear. `H-2C6B2E` and `H-FE02A6` share the one development profile whose first paragraph gives a date after its opening line |
+| The customer is tied to the places the notes say they lived | `resolve.py`: `Resolver.picture` ties the customer to any country a support note names outright | For a person it can only hold a location clearance back. For a company it can confirm a match on the name and that country |
 
 ## The eleven reason codes
 

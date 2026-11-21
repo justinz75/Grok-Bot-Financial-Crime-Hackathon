@@ -21,6 +21,9 @@ MONTHS["sept"] = 9
 MON = r"(?:jan(?:uary)?|feb(?:ruary)?|mar(?:ch)?|apr(?:il)?|may|june?|july?|aug(?:ust)?|sep(?:t(?:ember)?)?|oct(?:ober)?|nov(?:ember)?|dec(?:ember)?)"
 
 
+MIN_YEAR, MAX_YEAR = 1800, 2100  # a year outside these is not a date of birth or of a report
+
+
 def make(year, month=None, day=None):
     """A PDate, or None when the parts are not a real date."""
     try:
@@ -29,7 +32,7 @@ def make(year, month=None, day=None):
         day = int(day) if day else None
     except (TypeError, ValueError):
         return None
-    if not 1800 <= year <= 2100:
+    if not MIN_YEAR <= year <= MAX_YEAR:
         return None
     if month is None:
         return PDate(year, None, None)
@@ -118,18 +121,47 @@ def parse_date(value):
     return None
 
 
-def parse_dates(value):
-    """Every date in a multi-valued field such as a hit's dobs ('1996; 1997')."""
+def _items(value):
+    """The items of a multi-valued field such as a hit's dobs, given as a list or as
+    one string ('1996; 1997')."""
     if value is None:
         return []
-    items = value if isinstance(value, (list, tuple)) else re.split(r"[;|\n]", str(value))
+    return value if isinstance(value, (list, tuple)) else re.split(r"[;|\n]", str(value))
+
+
+def parse_dates(value):
+    """Every date in a multi-valued field such as a hit's dobs ('1996; 1997')."""
     out, seen = [], []
-    for item in items:
+    for item in _items(value):
         d = parse_date(item)
         # an ambiguous date is kept beside the plain date it equals as a tuple
         if d and readings(d) not in seen:
             out.append(d)
             seen.append(readings(d))
+    return out
+
+
+_FOUR_DIGITS = re.compile(r"(?<!\d)\d{4}(?!\d)")
+
+
+def unread_dates(value):
+    """The items of a multi-valued date field that could not be read and may still be
+    the date that agrees. parse_dates leaves them out; such a date is unknown, not absent.
+
+    Two kinds of item are not listed, because they cannot agree with any date held here:
+    one with no digit in it, which gives no date, and one whose only four-digit numbers
+    are years no date here can have, such as 1340, a year from another calendar."""
+    out = []
+    for item in _items(value):
+        shown = "" if item is None else str(item).strip()
+        if not shown or shown in out or parse_date(item) is not None:
+            continue
+        if not any(ch.isdigit() for ch in shown):
+            continue
+        years = [int(y) for y in _FOUR_DIGITS.findall(shown)]
+        if years and not any(MIN_YEAR <= y <= MAX_YEAR for y in years):
+            continue
+        out.append(shown)
     return out
 
 
