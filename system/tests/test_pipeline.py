@@ -340,6 +340,15 @@ class RareCases(unittest.TestCase):
                                  "name": "Holm, Lars", "dobs": ["1951"], "countries": ["Germany"]})
         self.check(f.run()["H-00FFFF"], "REVIEW", "INSUFFICIENT_DATA", None)
 
+    def test_27_a_check_read_without_its_date_of_birth_does_not_let_the_declared_date_clear(self):
+        f = Folder()
+        rid = f.customer("Lars Holm", "1990-01-01", verified=None)
+        f.note(rid, "The provider verified the passport of LARS HOLM, issued in Germany, on 2024-03-01.",
+               channel="kyc", created_at="2024-03-01")
+        a = f.alert("Lars Holm", account=f.field("accounts", "customer_id", rid, "account_id"))
+        h = f.hit(a, "Holm, Lars", ["1951"], ["Germany"])
+        self.check(f.run()[h], "REVIEW", "INSUFFICIENT_DATA", rid)
+
     def test_26_a_failed_check_in_a_note_is_not_evidence(self):
         f = Folder()
         rid = f.customer("Lars Holm", "1977-12-13", verified=None)

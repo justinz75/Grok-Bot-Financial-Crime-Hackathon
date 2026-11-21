@@ -29,7 +29,9 @@ Below, `DATA` means your `screening/dev` folder and `ROOM` the `screening` folde
 
 ## Job 2: pick a model that answers the same way twice (20 minutes)
 
-Wait until `tools/model_check.py` is on `main`, then pull.
+`tools/model_check.py` is on `main` now: pull first. The system's default model ID is
+`openai/gpt-4o-mini`; nobody has confirmed OpenRouter still offers it, so check the model list on
+openrouter.ai and pick three IDs that exist.
 
 1. Run it for three small, cheap models, one at a time:
    `python tools/model_check.py <model id>`
@@ -44,10 +46,13 @@ Wait until `tools/model_check.py` is on `main`, then pull.
 
 ## Job 3: the results table (30 minutes)
 
-Wait until `tools/ablate.py` is on `main`, then pull.
+`tools/ablate.py` is on `main` now.
 
-1. Run: `python tools/ablate.py DATA ROOM --runs 5 --model <the model ID from job 2>`
-   It runs the system with each layer off and on and prints one row per setting.
+1. Run: `python tools/ablate.py DATA --runs 5 --stress --model <the model ID from job 2>`
+   It runs the system with each layer off and on and prints one row per setting, first on the
+   data as given and then on a copy whose identity notes have lost their capitals. With a key
+   set, this sends note text and customer and hit facts to OpenRouter, which the brief allows.
+   Expect a few minutes and a small cost.
 2. Copy the whole table into `docs/results.md`, under a heading with the date, the time and the
    model ID. Add nothing and change no number.
 3. Under the table write three plain sentences:

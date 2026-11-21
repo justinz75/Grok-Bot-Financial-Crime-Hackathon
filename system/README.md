@@ -163,7 +163,21 @@ the scored file, so it is git-ignored.
 | score on | 0 | 50 of 50 | works: adds strength and rarity, changes nothing scored |
 | score enforce | 0 | 50 of 50 | harmless as calibrated; see below for the version that was not |
 | briefing on | 0 | 50 of 50 | works: 881 briefings, every review says what would settle it |
-| reviewer, reader | not measured here | | need an API key; `tools/ablate.py --runs 5` reports changes and run-to-run stability |
+| reviewer on or enforce | 0 | 50 of 50 | unproven: run with a stand-in, which agreed with all 504 clearances |
+| reader on or enforce | 0 | 50 of 50 | idle here: the rules read every note in the development set, so it made no calls |
+
+The reader only matters when notes are harder to read, so the same comparison was run on a copy
+whose identity notes print the legal name without capitals:
+
+| Setting | Decisions that differ from the clean run | Practice score | New clearances |
+|---|---|---|---|
+| rules only | 35 of 819 | 97.2 | 0 |
+| reader on (may support, never clear) | 35 of 819 | 97.2 | 0 |
+| reader enforce (counts in full) | 1 of 819 | 100 | 0 |
+
+The rules degrade safely: 23 clearances fall back to review and nothing is wrongly cleared. A
+reader that is trusted gets them back. That result is from the stand-in, which reads capitalised
+words; a real model still has to earn it, and `tools/ablate.py --runs 5 --stress` is how.
 
 **What did not work.** The first score weighed an agreeing name by its rarity with no cap, as
 textbook record linkage does. A hit exists because the name is similar, so that weight was large
@@ -216,6 +230,9 @@ Evidence: `CUS-783545`, `KYC-80B445`.
   clear one.
 - **Unknown countries.** A country string we cannot resolve blocks a location clearance instead
   of being ignored.
+- **The model layers are unproven.** They are built, tested and compared against a stand-in, not a
+  real model: there was no API key when this was written. They stay off until
+  `tools/ablate.py --runs 5` shows a real model is stable and creates no clearance.
 - **Date of death** is read from the hit's field only, not from prose.
 - **Names in other scripts** are compared as written; there is no transliteration beyond the
   variants file.
@@ -231,13 +248,9 @@ python -m unittest discover -s system/tests
 |---|---|
 | `test_rules.py` | Name, date and country rules, and the decision table |
 | `test_extract.py` | Reading notes, profile sentences, dated reports and search results |
-| `test_pipeline.py` | 26 whole-run cases the policy covers but the development set barely shows: joint accounts, family members sharing a phone, rejected checks, checks written only as notes, companies, a date of death, namesakes in search results, no record found |
+| `test_pipeline.py` | 27 whole-run cases the policy covers but the development set barely shows: joint accounts, family members sharing a phone, rejected checks, checks written only as notes, companies, a date of death, namesakes in search results, no record found |
 | `test_layers.py` | The three layer guarantees |
 | `test_layer_*.py` | Each layer on its own |
 
 Every name and record in the tests is invented. `tools/stress.py` damages the real free text nine
 ways and confirms that reading less never creates a clearance.
-
-- **The model layers are unmeasured.** They are built and tested against a stand-in model, but
-  had no API key when this was written. Until `tools/ablate.py --runs 5` shows they are stable,
-  they stay off.

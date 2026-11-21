@@ -270,6 +270,10 @@ class Resolver(object):
                     for code in C.find_in_text(body, demonyms=looks_like_check):
                         tie(code, note_id)
                 elif got["approved"]:
+                    if got.get("dob") is None:
+                        # the check was found but its date of birth was not: the declared
+                        # date may differ from the verified one, so it must not clear a hit
+                        unread_check = True
                     checks.append((_order(D.parse_date(note.get("created_at"))), note_id,
                                    got.get("name") or "", got.get("dob"), got.get("countries") or [], None,
                                    bool(got.get("soft"))))
