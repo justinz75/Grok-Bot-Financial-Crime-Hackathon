@@ -32,9 +32,11 @@ the decision, and it keeps free-text reading in one place where it can be tested
 
 ## 3. When something cannot be read, it is unknown, and unknown means review
 
-**Decided** 12:03, widened 12:35.
+**Decided** 12:03, widened 12:35 and 13:20.
 
 - A note the reader cannot read gives no fact. It does not give a guess.
+- An identity check that is found but whose date of birth cannot be read does not let the
+  declared date of birth clear a hit. The declared date may differ from the verified one.
 - A country string that cannot be resolved blocks a location clearance.
 - A customer who cannot be found in the system of record cannot be cleared or confirmed on the
   screened details.
@@ -96,6 +98,20 @@ output changes between runs while it is enforcing.
 
 **Why.** These are the conditions under which a model cannot cost a clearance or a
 reproducibility point.
+
+**Built stricter than decided** (on `main` at `38e0b75`, 13:23).
+- A name the model reads must share a part with a name the bank already holds for that customer.
+- A date of birth the model reads must fall at least 14 years before the check.
+- A note outside the identity-check channel reaches the model only if it also names a document.
+- A check counts as read only when its date of birth was read. An earlier version counted a
+  name alone, and on damaged notes that turned 15 matches into clearances.
+
+**Measured so far, against a stand-in and not a real model.** On the data as given no model
+setting changes a decision, and the reader makes no calls because the rules read every note.
+On a copy whose identity notes lost their capitals, the rules alone differ from the clean run on
+35 of 819 hits (practice score 97.2), the reader set to `on` is the same, and the reader set to
+`enforce` differs on 1 (practice score 100). No setting created a clearance. The stand-in only
+reads capitalised words, so this shows the plumbing works, not that a model does.
 
 ## 7. The strength-of-evidence score caps the weight of a name
 

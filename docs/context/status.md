@@ -1,6 +1,7 @@
 # Where things stand
 
-**Snapshot: 13:24 London time, 21 November 2026, with `main` at commit `38e0b75`.**
+**Snapshot: 13:27 London time, 21 November 2026. The code on `main` last changed at commit
+`38e0b75`; later commits change documents only.**
 
 This page goes out of date quickly. The live picture is always in git:
 
@@ -60,8 +61,8 @@ no API key was available, so a real model is still unmeasured. That measurement 
 
 | What | Who | Where | State at the snapshot |
 |---|---|---|---|
-| The review viewer, `viewer/index.html` | Teammate A | branch `task/viewer` | A first version was committed at 13:08. Not merged |
-| Country table check, clearance audit, demo on public lists | Teammate B | branch `task/data`, not pushed yet | Handed off at 12:52 |
+| The review viewer, `viewer/index.html` | Teammate A | branch `task/viewer`, pushed | A first version was committed at 13:08 (`8364c21`). Not merged |
+| Country table check, clearance audit, demo on public lists | Teammate B | branch `task/data`, pushed | `tools/make_public_demo.py` and `docs/data-sources.md` were committed at 13:18 (`14d4f29`). Not merged. The country check and the audit have not been reported |
 | Model check, results table, demo script, submission text, video | Teammate C | branch `task/results`, not pushed yet | Handed off at 12:52. `tools/model_check.py` and `tools/ablate.py` are on `main`, so every job can start |
 
 The handoffs are `tasks/teammate-A-viewer.md`, `tasks/teammate-B-data.md` and

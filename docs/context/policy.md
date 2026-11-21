@@ -140,10 +140,10 @@ These are deliberate. Each one can cost a review and can never cost a clearance.
 
 | Situation | What the code does | Where |
 |---|---|---|
-| An identity check written as a note cannot be read | The declared date of birth may still agree with a hit, but it may not clear one | `Customer.dob_can_clear` |
+| An identity check written as a note cannot be read, or is read without its date of birth | The declared date of birth may still agree with a hit, but it may not clear one | `Customer.dob_can_clear` |
 | A country string cannot be resolved | It blocks a location clearance instead of being ignored | `location_state` |
 | No customer record is found | The screened details can neither clear nor confirm. Only the entity type and a date of death, which need no record, still decide | `resolve.py`: `screened_only` |
-| A legal name was read by a model and not by the rules | It may support a match but may not clear on name | `Customer.name_can_clear` |
+| A legal name or a date of birth was read by a model and not by the rules | It may support a match but may not clear, unless the reader is set to `enforce` | `Customer.name_can_clear`, `Customer.dob_can_clear` |
 | A hit cannot be processed at all | It gets a `REVIEW` line, never a silent clearance | `pipeline.py`: `_unprocessed` |
 
 ## The eleven reason codes

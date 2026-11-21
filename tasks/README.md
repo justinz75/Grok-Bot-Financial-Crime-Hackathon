@@ -74,8 +74,9 @@ python ROOM/validate.py --data DATA --output output/dev.jsonl --score DATA/pract
 python tools/stress.py DATA                                      # damaged-text stress test
 ```
 
-Expected today: 168 tests pass; 819 hits; 0 problems; 50 of 50 practice labels right; 0 unsafe
-clearances; stress test reports no new clearances.
+The results to expect are in [docs/context/status.md](../docs/context/status.md), which is kept
+current: the test count, the decision counts and the practice-label score. The stress test must
+report no new clearances.
 
 ## Report format
 
