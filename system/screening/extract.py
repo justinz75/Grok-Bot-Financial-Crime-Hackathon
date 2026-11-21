@@ -176,6 +176,12 @@ _FAILED = re.compile(
     r"reject|fail|declin|expire|unsuccessful|not successful|could not|couldn.t|unable|not verified|"
     r"unverified|denied|invalid|did not pass|didn.t pass|refus|not approved|mismatch|fraudulent|forged|"
     r"inconclusive|abandon|cancel|incomplete|not match|no match", re.I)
+# A note outside the identity-check channel is a check only if it names a document:
+# "verified" and "identity" also turn up in ordinary support notes.
+NAMES_A_DOCUMENT = re.compile(
+    r"passport|licen[cs]e|national id|identity card|id card|identity document|residence permit|"
+    r"registry extract|certificate of incorporation|\bkyc\b|identity (?:check|verification)", re.I)
+MIN_YEARS_BEFORE_CHECK = 14  # a person's date closer to the check than this is a document date, not a birth date
 _NAME_STOP = frozenset("DOB KYC ID UK US USA UAE EU OK PEP AML NIN SSN ISO PDF MRZ".split())
 _EDGE = "([{\"'‘“"
 _TAIL = ")]}\"'’”,.;:!?"

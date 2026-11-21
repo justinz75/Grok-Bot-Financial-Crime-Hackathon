@@ -298,8 +298,14 @@ class Briefing(object):
                            "other country would clear the hit." % _countries(hit.countries, "or"))
             else:
                 unread = [str(u).strip() for u in list(customer.unknown_countries) + list(hit.unknown_countries)]
-                out.append("Reading the country written as %s would settle it: a country shared with the "
-                           "other side would confirm the match." % _join(["\"%s\"" % u for u in unread] or ["unknown"], "and"))
+                mentioned = sorted(set(getattr(customer, "possible_countries", None) or {}) & set(hit.countries))
+                if mentioned and not unread:
+                    out.append("Finding out whether the customer is tied to %s would settle it: a note about them "
+                               "mentions it, and a shared country would confirm the match."
+                               % _countries(mentioned, "or"))
+                else:
+                    out.append("Reading the country written as %s would settle it: a country shared with the "
+                               "other side would confirm the match." % _join(["\"%s\"" % u for u in unread] or ["unknown"], "and"))
 
         if not out:
             out.append("A person needs to compare the records: the facts available neither contradict nor "

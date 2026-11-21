@@ -59,9 +59,15 @@ separate explain file, and cannot create a clearance.
    does not merge.
 4. **Verified beats declared.** The person's most recent approved identity check gives the legal
    name, date of birth and document country, whether it is a row in `kyc_checks` or only a note.
-   Rejected and expired checks are ignored.
+   Rejected and expired checks are ignored. A check read out of a note may clear a hit only when
+   the note can be believed: outside the identity-check channel it must name a document, its
+   legal name must share a part with a name the bank holds for the customer, and a person's date
+   of birth must fall at least 14 years before the note. Otherwise what it says may support a
+   match and never clears one.
 5. **Countries.** Residence and nationality on every record, the approved document's country,
-   and every country the support notes name.
+   and every country the support notes name. A country a support note only mentions, as a
+   nationality word or in a note set aside as a failed check, is not a tie, but it stops a
+   location clearance against that country.
 6. **Several people fit.** Each is decided separately. One shared decision is given; different
    decisions become `REVIEW` with `AMBIGUOUS_CUSTOMER_RECORD`. The customer is `AMBIGUOUS` either way.
 
@@ -238,6 +244,12 @@ Evidence: `CUS-783545`, `KYC-80B445`.
   clear one.
 - **Unknown countries.** A country string we cannot resolve blocks a location clearance instead
   of being ignored.
+- **A doubtful note still stands in front of a real check.** When a later note reads like an
+  identity check and cannot be believed, it no longer clears a hit, but it is still taken as the
+  latest check. A hit that an earlier real check would have confirmed or cleared then goes to
+  review. Skipping such a note could turn a review into a clearance, so it has not been done.
+- **A city without its country is not read.** "Lived in Lagos" ties the customer to no country,
+  so a location clearance against Nigeria still goes through.
 - **The model layers are unproven.** They are built, tested and compared against a stand-in, not a
   real model: there was no API key when this was written. They stay off until
   `tools/ablate.py --runs 5` shows a real model is stable and creates no clearance.
@@ -257,8 +269,16 @@ python -m unittest discover -s system/tests
 | `test_rules.py` | Name, date and country rules, and the decision table |
 | `test_extract.py` | Reading notes, profile sentences, dated reports and search results |
 | `test_pipeline.py` | 27 whole-run cases the policy covers but the development set barely shows: joint accounts, family members sharing a phone, rejected checks, checks written only as notes, companies, a date of death, namesakes in search results, no record found |
+| `test_wording.py` | 15 whole-run cases of text that can be misread: capitals that are not the legal name, a year that is not a birth date, a country written as a nationality. None may clear a hit, and the controls check that a real check still does |
 | `test_layers.py` | The three layer guarantees |
 | `test_layer_*.py` | Each layer on its own |
 
-Every name and record in the tests is invented. `tools/stress.py` damages the real free text nine
-ways and confirms that reading less never creates a clearance.
+Every name and record in the tests is invented. `tools/stress.py` damages the real free text 14
+ways. Nine take text away or reword it, and on the development set none of them creates a
+clearance. Five add text that can be misread, the same wordings as `test_wording.py`. Those five
+have only been run on invented records so far: there the rules as they were cleared hits on all
+five, and the rules as they are clear none.
+
+`python tools/loop.py DATA` is the loop to iterate with. It runs the tests, lists every hit a
+change moved against the committed predictions and fails if one moved into a clearance, scores
+the practice labels, then runs the stress test and the five-run check.

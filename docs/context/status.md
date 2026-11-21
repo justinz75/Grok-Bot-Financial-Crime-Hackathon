@@ -20,7 +20,7 @@ different on the same commit, stop and report it.
 
 | Command | What it printed |
 |---|---|
-| `python -m unittest discover -s system/tests` | `Ran 169 tests`, `OK` |
+| `python -m unittest discover -s system/tests` | `Ran 184 tests`, `OK` |
 | `python system/run DATA <file>` | `819 hits decided in 6.6s: DIFFERENT_ENTITY 464, REVIEW 230, SAME_ENTITY 125` |
 | the same run, second line | `layers: score=on, reviewer=off, briefing=on, reader=off` |
 | the run twice, files compared | byte-identical |

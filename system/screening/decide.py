@@ -24,11 +24,12 @@ class Customer(object):
     def __init__(self, kind, record_ids=(), verified_name=None, verified_source=None,
                  names=(), dob=None, dob_source=None, countries=None,
                  unknown_countries=(), screened_at=None, primary=None, dob_can_clear=True,
-                 confirmable=True, name_can_clear=True):
+                 confirmable=True, name_can_clear=True, possible_countries=None):
         self.kind = kind
         self.dob_can_clear = dob_can_clear        # False when an identity check could not be read
         self.confirmable = confirmable            # False when no customer record was found
-        self.name_can_clear = name_can_clear      # False when the legal name was read by a model
+        self.name_can_clear = name_can_clear      # False when the legal name was read by a model, or from a note that cannot be believed
+        self.possible_countries = dict(possible_countries or {})  # code -> notes that only mention it
         self.record_ids = sorted(record_ids)
         self.primary = primary or (self.record_ids[0] if self.record_ids else None)  # the record first found
         self.verified_name = verified_name        # legal name on the latest approved check
@@ -126,6 +127,12 @@ def name_state(customer, hit, rules):
     return "unknown", None
 
 
+def mentioned_ties(customer, hit):
+    """The hit's countries that a note about the customer mentions without tying the
+    customer to them: a nationality word, or a note set aside as a failed check."""
+    return sorted(set(getattr(customer, "possible_countries", None) or {}) & hit.countries)
+
+
 def location_state(customer, hit):
     """'agree' when they share a country, 'mismatch' when every country differs and
     none is unreadable, otherwise 'unknown'."""
@@ -139,6 +146,17 @@ def location_state(customer, hit):
     return "mismatch", shared
 
 
+def _location(customer, hit, name, dob):
+    """location_state, with one more caution. A country difference that would clear the
+    hit is 'unknown' when a note about the customer mentions one of the hit's countries.
+    Nothing else changes: where name and date of birth agree, a country difference never
+    cleared, so a mention has nothing to block and the difference stands."""
+    location, shared = location_state(customer, hit)
+    if location == "mismatch" and not (name == "agree" and dob == "agree") and mentioned_ties(customer, hit):
+        return "unknown", shared
+    return location, shared
+
+
 def states(customer, hit, rules):
     """The three comparisons behind every decision, exactly as decide() makes them:
     name, dob and location are each 'agree', 'mismatch' or 'unknown'."""
@@ -146,7 +164,7 @@ def states(customer, hit, rules):
     dob = D.compare(customer.dob, hit.dobs)
     if dob == "mismatch" and not customer.dob_can_clear:
         dob = "unknown"
-    location, shared = location_state(customer, hit)
+    location, shared = _location(customer, hit, name, dob)
     return {"name": name, "name_source": name_source, "dob": dob, "location": location, "shared": sorted(shared)}
 
 
@@ -201,7 +219,9 @@ def decide(customer, hit, rules):
             "The customer's verified name is %s%s, which does not match the hit's name %s."
             % (customer.verified_name, _cite(name_source), hit.name.rstrip(".")), [name_source])
 
-    location, shared = location_state(customer, hit)
+    location, shared = _location(customer, hit, name, dob)
+    # a note mentions one of the hit's countries, and that alone is why the difference does not clear
+    mentioned = mentioned_ties(customer, hit) if location != location_state(customer, hit)[0] else []
     name_and_dob_agree = name == "agree" and dob == "agree"
     if location == "mismatch" and not name_and_dob_agree:
         sources = [s for ids in customer.countries.values() for s in ids]
@@ -248,6 +268,11 @@ def decide(customer, hit, rules):
             % (_country_names(customer.countries), _country_names(hit.countries)))
         evidence += [s for ids in customer.countries.values() for s in ids]
     else:
+        if mentioned:
+            notes = sorted(set(s for code in mentioned for s in customer.possible_countries[code]))
+            sentences.append("A note about the customer (%s) mentions %s, a country tied to the hit, "
+                             "so the countries cannot be said to differ." % (", ".join(notes), _country_names(mentioned)))
+            evidence += notes
         missing = []
         if name != "agree":
             missing.append("the name cannot be matched to the hit")

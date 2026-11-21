@@ -7,6 +7,12 @@ our own: names in identity notes lose their capitals, ages and countries are
 rewritten, rows are shuffled. The test that matters is the last column: a hit that
 was REVIEW or SAME_ENTITY must never turn into DIFFERENT_ENTITY because text became
 harder to read. Reading less may cost reviews; it must not cost a clearance.
+
+The last five cases add text instead of taking it away: capitals that are not the
+legal name, a year that is not a birth date, words that make a support note read like
+a failed check, a country written as a nationality. Reading wrong must not cost a
+clearance either. The same wordings, on invented records, are in
+system/tests/test_wording.py.
 """
 import json
 import os
@@ -18,6 +24,7 @@ import tempfile
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "..", "system"))
 
+from screening import countries as C  # noqa: E402
 from screening import extract as X  # noqa: E402
 from screening.pipeline import Run  # noqa: E402
 from screening.store import TABLES, read_jsonl  # noqa: E402
@@ -103,6 +110,43 @@ def drop_optional_fields(tables):
             row.pop(field, None)
 
 
+# -- text that can be misread: these add words, where the cases above take them away --
+def _support_notes(tables):
+    return [note for note in tables["notes"] if note.get("channel") != "kyc" and note.get("text")]
+
+
+def add_to_support_notes(sentence):
+    def apply(tables):
+        for note in _support_notes(tables):
+            note["text"] = note["text"].rstrip() + " " + sentence
+    return apply
+
+
+def label_checks_in_capitals(tables):
+    for note in tables["notes"]:
+        if note.get("channel") == "kyc" and note.get("text"):
+            note["text"] = "CHECK PASSED. " + note["text"]
+
+
+def _nationality_words():
+    """(pattern for a country's main name, its nationality word) for every country that
+    has a nationality word the system reads in a sentence."""
+    out = []
+    for code, name in sorted(C.DISPLAY.items()):
+        words = [d for d, c in C.DEMONYMS.items() if c == code and C.find_in_text(d, demonyms=True) == [code]]
+        if words:
+            out.append((re.compile(r"\b%s\b" % re.escape(name)), words[0].title()))
+    return out
+
+
+def countries_as_nationalities(tables):
+    """'worked in Norway' becomes 'worked in Norwegian territory'."""
+    swaps = _nationality_words()
+    for note in _support_notes(tables):
+        for pattern, word in swaps:
+            note["text"] = pattern.sub(word + " territory", note["text"])
+
+
 CASES = [
     ("names in Title Case", [reword_name(lambda n: n.title())]),
     ("names in lower case", [reword_name(lambda n: n.lower())]),
@@ -113,6 +157,11 @@ CASES = [
     ("countries reworded", [reword_countries]),
     ("rows shuffled", [shuffle_rows]),
     ("optional fields dropped", [drop_optional_fields]),
+    ("support notes gain capitals", [add_to_support_notes("ATM PIN reset requested; identity confirmed on the call.")]),
+    ("checks gain a status in capitals", [label_checks_in_capitals]),
+    ("support notes gain a year", [add_to_support_notes("Date of birth on file confirmed; customer since 2019.")]),
+    ("support notes read as failed checks", [add_to_support_notes("Could not finish the identity verification by SMS OTP.")]),
+    ("countries as nationalities", [countries_as_nationalities]),
 ]
 
 

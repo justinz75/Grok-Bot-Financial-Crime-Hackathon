@@ -187,7 +187,8 @@ class Score(object):
         if all(len(rules.parts(n, company)) < need for n in names):
             return "The customer's name has fewer than two real parts, so it can neither confirm nor clear"
         if getattr(customer, "verified_name", None) and not getattr(customer, "name_can_clear", True):
-            return "No declared name agrees with the hit's, and the legal name was read by a model, which may not clear a hit"
+            return ("No declared name agrees with the hit's, and the legal name was read by a model or from a note "
+                    "that cannot be believed, which may not clear a hit")
         if getattr(customer, "verified_name", None):
             return "The verified name has too few real parts to compare, and no other name agrees with the hit's"
         return "No name on the customer's records agrees with the hit's, and there is no verified legal name to rule it out"
