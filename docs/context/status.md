@@ -1,7 +1,7 @@
 # Where things stand
 
-**Snapshot: 14:18 London time, 21 November 2026. The decision code under `system/screening/` last
-changed at commit `7259c05`.**
+**Snapshot: 14:31 London time, 21 November 2026. The decision code under `system/screening/` last
+changed at commit `10b7575`, the merge of pull request 3.**
 
 This page goes out of date quickly. The live picture is always in git:
 
@@ -13,17 +13,23 @@ git branch -r                     # which task branches have been pushed
 
 If you change the state of a task, update this page in the same pull request.
 
+The `task/screening-improvements` draft groups watchlist DOB retrieval, country-clearance
+regressions, and scored reason and evidence alignment. On the draft branch the unit suite
+passed 222 tests and the official validator accepted all 819 development predictions.
+Compared with the predictions on `main`, no verdict, reason code or customer record changed.
+
 ## Numbers to expect
 
-The tests, the run, the validator, the practice-label score and the five-run check below were
-run again at `dcc67c1`, which holds the decision code of `7259c05`. The country check and the
-workflow line are from the commits they name. If you see something different, stop and report it.
+The tests, the run, the validator, the practice-label score, the five-run check and the stress
+test below were run at `10b7575`, the merge of pull request 3. The
+country check and the workflow line are from the commits they name. If you see something
+different, stop and report it.
 
 | Command | What it printed |
 |---|---|
-| `python -m unittest discover -s system/tests` | `Ran 187 tests`, `OK` |
+| `python -m unittest discover -s system/tests` | `Ran 202 tests`, `OK` |
 | `python tools/make_viewer_sample.py --check` | `the sample is up to date` |
-| `python system/run DATA <file>` | `819 hits decided in 6.8s: DIFFERENT_ENTITY 464, REVIEW 230, SAME_ENTITY 125` |
+| `python system/run DATA <file>` | `819 hits decided in 6.9s: DIFFERENT_ENTITY 464, REVIEW 230, SAME_ENTITY 125` |
 | the same run, second line | `layers: score=on, reviewer=off, briefing=on, reader=off` |
 | the run twice, files compared | byte-identical |
 | a fresh run compared with the committed `output/dev.jsonl` | byte-identical |
@@ -31,7 +37,9 @@ workflow line are from the commits they name. If you see something different, st
 | the same with `--score DATA/practice_labels.jsonl` | `50 hits, 50 right decisions, 0 unsafe clearances`, `decision score 100.0`, `reason code 100%, customer record 100%` |
 | evidence list compared with the reference list on the practice labels | equal on 50 of 50 |
 | `python tools/repro.py DATA --runs 5 --strict` | 5 fresh processes with hash seeds `random`, 1, 2, 3, 4: `hits whose decision or reason code differs between runs: 0`, scored and explain files `byte-identical across 5 runs: yes`, `committed output/dev.jsonl equals a fresh run: yes`, exit code 0 |
-| the scored file's SHA-256, from the same command | `28b0b35d1d11abe5e65cdeca9b9f174d7cee16f09272f437910f3d277fd3c91d` |
+| the scored file's SHA-256, from the same command | `c23adcc75543dca9c8534cfe3b613edfa28a0e4921856885596c610dd9e97bc1` |
+| `python tools/stress.py DATA` | 14 cases. The nine that take text away or reword it: `NEW CLEAR` 0 on every row. The five that add misleading text: `NEW CLEAR` 0, 0, 2, 0, 0, so it ends `new clearances caused by harder text: UP TO 2, investigate` and exits 1. Before pull request 3 the same five printed 129, 10, 28, 41 and 40 |
+| `python tools/loop.py DATA` | steps 1, 2, 3 and 5 `PASS`; step 4 (stress) `FAIL` for the two clearances above; step 6 skipped until `data/public_demo` is built |
 | `python tools/check_countries.py <the ISO 3166 list>` | `249 countries checked, 0 problems`. It also prints `EXTRA CODE XK (Kosovo)`: Kosovo is not on the ISO list and is kept on purpose, because watchlists use it |
 | the test workflow on GitHub, read at 13:30 for commit `9ae3d90` | 8 jobs, all `success`: Linux, Windows and macOS with Python 3.10 and 3.12, Linux with Python 3.8, and the check that `system/run` is executable, has the `python3` line and Unix line endings |
 
@@ -62,11 +70,20 @@ The stress test and the layer comparison are reported in [system/README.md](../.
 | The five-run reproducibility check `tools/repro.py` and the test workflow `.github/workflows/tests.yml` (task 03) | `9ae3d90` |
 | Country names the official list writes back to front, found by Teammate B's country check | `e3cf06a` |
 | A numeric date that can be read two ways (day first or month first) no longer clears a hit unless both readings contradict it, with 14 tests. It changed no decision on the development set | `7259c05` |
+| Pull request 3: a check read out of a note clears a hit only when the note can be believed, a country a support note only mentions blocks a location clearance against it, 15 wording tests, five stress cases that add misleading text, and `tools/loop.py`. On the development set it changed no decision and the wording of one reason, so `output/dev.jsonl` was regenerated in the merge | `10b7575` |
 | Teammate B's demo on public sanctions lists, `tools/make_public_demo.py` and `docs/data-sources.md` (pull request 2), with the three review fixes | `dedc2f7` |
 | Teammate A's review viewer, `viewer/index.html` (pull request 1), with the five review fixes | `395a9af` |
 | The viewer redesign: a built-in sample made by the real system (`tools/make_viewer_sample.py`, 4 tests), side-by-side cards, a review queue | `dcc67c1` |
 
 ## In progress
+
+**Open safety gap, measured at the merge of pull request 3.** With the sentence "Date of birth
+on file confirmed; customer since 2019." added to every support note, two development-set hits
+move from `REVIEW` to `DIFFERENT_ENTITY`. In both, a real identity check gives a date of birth
+that agrees with the hit. The added note is read as a later check and is not believed, but it
+still replaces the real check, the agreement is lost, and a country difference then clears the
+hit. The fix under discussion: a note that cannot be believed never replaces a check that can.
+The session that wrote pull request 3 owns those files; the owner's session measures.
 
 The model layers are on `main` but off by default. They have only run against a stand-in model:
 no API key was available, so a real model is still unmeasured. That measurement is Teammate C's job.

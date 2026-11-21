@@ -138,8 +138,12 @@ Use IDs in these formats when you invent test data, and never reuse a real one.
    about an offence was once read as an age, which would have produced wrong clearances. Only a
    genuine birth sentence counts.
 7. **Identity checks written as notes** are in the `kyc` channel (22,575 notes). In the
-   development set every one prints the legal name in capitals, and the reader relies on that.
-   If the unseen set does not, those customers fall back to review. They are never cleared on a guess.
+   development set every one prints the legal name in capitals, and the reader relies on that:
+   it takes the longest run of capitals as the legal name. If the unseen set prints no capitals,
+   those customers fall back to review. If it prints other capitals (a label such as FULL NAME,
+   a status, an abbreviation in a support note), the reader takes them for the name. So a name
+   read from a note may clear a hit only when it shares a part with a name the bank holds for
+   the customer. `system/tests/test_wording.py` holds the wordings that were found.
 8. **Rejected and expired checks sit beside approved ones** (2,481 and 2,433 against 49,574).
    They are not evidence.
 9. **Relatives share phones and addresses.** Only a phone with the same full date of birth, or a

@@ -18,6 +18,16 @@ from .textutil import fold
 APPROVED = frozenset("approved passed pass clear cleared verified accepted success successful".split())
 # The policy lists the screened city among the details a record must fit.
 CITY_REQUIRED = True
+# The rules read a check written as a note by its shape: the longest run of capitals is
+# the legal name and the one free date is the date of birth. That holds for a real check
+# and not for every note, so a reading that Resolver.believable turns down may support a
+# match and never clear a hit. Set to False to measure what the rule costs.
+DOUBTFUL_NOTES_NEVER_CLEAR = True
+# A country a support note only mentions (a nationality word, or a note that reads like a
+# failed check and is set aside) is not a tie. It still stops a location clearance against
+# that one country: missing a place the customer lived would clear a hit that should not
+# clear. Set to False to measure what the rule costs.
+MENTIONED_COUNTRIES_BLOCK = True
 NAME_FIELDS = ("full_name", "preferred_name", "login_name")
 COUNTRY_FIELDS = ("residence_country", "nationality")
 _SENTENCE_BREAK = re.compile(r"(?<=[.!?])\s+|\n+")
@@ -246,12 +256,40 @@ class Resolver(object):
         return screened, how, people
 
     # -- the picture -----------------------------------------------------------------
+    def believable(self, got, body, is_check, created_at, held, company):
+        """Whether a check the rules read out of a note may clear a hit. Three things
+        must hold, the same three the reader layer asks of what a model reads:
+
+            the note   outside the identity-check channel it must name a document;
+            the name   must share a part with a name the bank holds for this customer;
+            the date   of a person must fall at least 14 years before the note.
+
+        A reading that fails is kept, and may still support a match. It never clears."""
+        if not is_check and not X.NAMES_A_DOCUMENT.search(body):
+            return False
+        name = got.get("name")
+        if name:
+            mine = self.rules.parts(name, company)
+            if not any(self.rules.agree(mine, parts) or any(self.rules.part_match(a, b) for a in mine for b in parts)
+                       for parts in held):
+                return False
+        dob, checked = got.get("dob"), D.parse_date(created_at)
+        if dob is not None and checked is not None and not company and (
+                dob.year > checked.year - X.MIN_YEARS_BEFORE_CHECK):
+            return False
+        return True
+
     def picture(self, group, first, screened):
         """Everything known about one person, with the record each fact came from."""
         store = self.store
         kind = self.features(first)[4] or screened.kind
         names, countries, unknown = [], {}, []
         precautionary = set()
+        # the names the bank holds for this person: every record's, and the screened one
+        held = [parts for rid in group for parts in self.features(rid)[0]]
+        if screened.parts:
+            held.append(screened.parts)
+        mentioned = []  # (note ID, text) of the notes outside the identity-check channel
 
         def tie(code, source, raw=None):
             if code is None:
@@ -282,6 +320,8 @@ class Resolver(object):
                 note_id, body = text(note.get("note_id")), text(note.get("text"))
                 looks_like_check = key(note.get("channel")) == "kyc"
                 got = self.read_note(body, note.get("created_at"), is_check=looks_like_check)
+                if not looks_like_check and (note_id, body) not in mentioned:
+                    mentioned.append((note_id, body))
                 if got is None:
                     unread_check = unread_check or looks_like_check
                     travel = _travel_only_countries(body) if not looks_like_check else ()
@@ -294,15 +334,19 @@ class Resolver(object):
                         # the check was found but its date of birth was not: the declared
                         # date may differ from the verified one, so it must not clear a hit
                         unread_check = True
+                    doubtful = DOUBTFUL_NOTES_NEVER_CLEAR and not self.believable(
+                        got, body, looks_like_check, note.get("created_at"), held, kind == COMPANY)
                     checks.append((_order(D.parse_date(note.get("created_at"))), note_id,
                                    got.get("name") or "", got.get("dob"), got.get("countries") or [], None,
-                                   bool(got.get("soft"))))
+                                   bool(got.get("soft")) or doubtful))
         if screened.name:
             names.append((screened.name, None))
 
         verified_name = verified_source = None
         dob = dob_source = None
-        soft_source = None  # a check read by the model in its cautious mode: supports, never clears
+        # a check read by the model in its cautious mode, or a note the rules read and
+        # could not believe: it supports a match and never clears a hit
+        soft_source = None
         if checks:
             latest = max(checks, key=lambda item: (item[0], item[1]))
             verified_name, verified_source = latest[2] or None, latest[1]
@@ -330,9 +374,15 @@ class Resolver(object):
         dob_can_clear = not (unread_check and dob_source not in [c[1] for c in checks])
         if soft_source is not None and dob_source == soft_source:
             dob_can_clear = False
+        possible = {}  # code -> notes that mention the country without tying the customer to it
+        for note_id, body in (mentioned if MENTIONED_COUNTRIES_BLOCK else []):
+            for code in C.find_in_text(body, demonyms=True):
+                if code not in countries and note_id not in possible.setdefault(code, []):
+                    possible[code].append(note_id)
         return Customer(kind, group, verified_name, verified_source, names, dob, dob_source,
                         countries, unknown, screened.at, primary=first, dob_can_clear=dob_can_clear,
-                        name_can_clear=soft_source is None, precautionary_countries=precautionary.difference(countries))
+                        name_can_clear=soft_source is None, possible_countries=possible,
+                        precautionary_countries=precautionary.difference(countries))
 
     def screened_only(self, screened):
         """No record fits: the screened details are all there is. They are declared,

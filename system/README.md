@@ -59,9 +59,15 @@ separate explain file, and cannot create a clearance.
    does not merge.
 4. **Verified beats declared.** The person's most recent approved identity check gives the legal
    name, date of birth and document country, whether it is a row in `kyc_checks` or only a note.
-   Rejected and expired checks are ignored.
-5. **Countries.** Residence and nationality on every record, the approved document's country,
-   and every country the support notes name.
+   Rejected and expired checks are ignored. A check read out of a note may clear a hit only when
+   the note can be believed: outside the identity-check channel it must name a document, its
+   legal name must share a part with a name the bank holds for the customer, and a person's date
+   of birth must fall at least 14 years before the note. Otherwise what it says may support a
+   match and never clears one.
+5. **Countries.** Take residence and nationality from every customer record and the document
+   country from the latest approved check. Explicit travel-only mentions and superseded documents
+   can block a location clearance without establishing country agreement. Other country mentions
+   without a residence tie can also block a clearance when the hit is linked to that country.
 6. **Several people fit.** Each is decided separately. One shared decision is given; different
    decisions become `REVIEW` with `AMBIGUOUS_CUSTOMER_RECORD`. The customer is `AMBIGUOUS` either way.
 
@@ -70,10 +76,12 @@ separate explain file, and cannot create a clearance.
 A hit's date of birth is taken from the first place that has one:
 
 1. its `dobs` field;
-2. the opening line of its profile notes ("born on 17 July 1939", or an age at a date, which
+2. the opening paragraph of its profile notes ("born on 17 July 1939", or an age at a date, which
    gives two possible birth years);
-3. web search results for its name, but only a result that describes the same kind of listing
-   (from the hit's primary category) in a country tied to the hit. The rest are namesakes.
+3. search results across the normalized keys for its name, deduplicated by result ID. A result
+   must describe the same kind of listing (from the hit's primary category) in a country tied
+   to the hit. Dates recovered by widening the search or reading wrapped text can support a
+   match, while a clearance on birth date still requires the original evidence to contradict it.
 
 Countries come from `countries`, `nationality`, `citizenship`, the last part of each address and
 the place of birth. Dated reports are only the English lines of the form
@@ -86,14 +94,15 @@ the facts that decided it:
 
 | Ground | Evidence cited |
 |---|---|
-| Date of birth | The check or note that gave the customer's date, plus the search result if the hit's date came from one |
+| Date of birth | The check or note that gave the customer's date, plus any search result or newly read profile paragraph that supplied the hit's date |
 | Location mismatch | Every record that ties the customer to a country |
 | Location agreement | The records that give the shared country |
 | Verified name mismatch | The identity check that gave the legal name |
 | Date of death | The hit's `deceased_date` field, written `H-xxxxxx#deceased_date` |
 
-The reason text opens with how the customer was found, then states each decisive fact with its
-own values.
+The reason text opens with how the customer was found, then states the selected grounds with
+their values. The evidence list comes from those same grounds. When multiple candidates fit
+the alert, the reason shows the comparison for each candidate.
 
 ## Staying the same from run to run
 
@@ -238,6 +247,14 @@ Evidence: `CUS-783545`, `KYC-80B445`.
   clear one.
 - **Unknown countries.** A country string we cannot resolve blocks a location clearance instead
   of being ignored.
+- **A doubtful note still stands in front of a real check.** When a later note reads like an
+  identity check and cannot be believed, it no longer clears a hit, but it is still taken as the
+  latest check. Most hits an earlier real check would have decided then go to review. Measured
+  on the development set with a misleading sentence added to every support note, two went the
+  wrong way instead: the real check's date of birth agreed with the hit, the note hid it, and a
+  country difference then cleared the hit. Four clearances also became matches.
+- **A city without its country is not read.** "Lived in Lagos" ties the customer to no country,
+  so a location clearance against Nigeria still goes through.
 - **The model layers are unproven.** They are built, tested and compared against a stand-in, not a
   real model: there was no API key when this was written. They stay off until
   `tools/ablate.py --runs 5` shows a real model is stable and creates no clearance.
@@ -257,8 +274,20 @@ python -m unittest discover -s system/tests
 | `test_rules.py` | Name, date and country rules, and the decision table |
 | `test_extract.py` | Reading notes, profile sentences, dated reports and search results |
 | `test_pipeline.py` | 27 whole-run cases the policy covers but the development set barely shows: joint accounts, family members sharing a phone, rejected checks, checks written only as notes, companies, a date of death, namesakes in search results, no record found |
+| `test_wording.py` | 15 whole-run cases of text that can be misread: capitals that are not the legal name, a year that is not a birth date, a country written as a nationality. None may clear a hit, and the controls check that a real check still does |
 | `test_layers.py` | The three layer guarantees |
 | `test_layer_*.py` | Each layer on its own |
 
-Every name and record in the tests is invented. `tools/stress.py` damages the real free text nine
-ways and confirms that reading less never creates a clearance.
+Every name and record in the tests is invented. `tools/stress.py` damages the real free text 14
+ways. Nine take text away or reword it, and on the development set none of them creates a
+clearance. Five add text that can be misread, the same wordings as `test_wording.py`. On the
+development set, the rules as they were turned 129, 10, 28, 41 and 40 reviews or matches into
+clearances on those five. The rules as they are turn 0, 0, 2, 0 and 0. The two that remain are
+described under "What is missing". The same five also turn 7, 1, 4, 0 and 0 clearances into
+matches, which sends a hit to compliance that the undamaged text would have cleared.
+
+`python tools/loop.py DATA` is the loop to iterate with. It runs the tests, lists every hit a
+change moved against the committed predictions and fails if one moved into a clearance, scores
+the practice labels, then runs the stress test and the five-run check. Last, when
+`data/public_demo` exists, it checks the public sanctions demo, whose answers are known by
+construction.
