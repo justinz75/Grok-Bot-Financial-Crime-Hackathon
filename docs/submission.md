@@ -13,7 +13,7 @@ Track 2, sanctions screening
 
 ## What did you build?
 
-A screening engine that decides, for every watchlist hit, whether the listed person is the bank's customer, a different person, or a case for an analyst. It runs the bank's identity policy as code: it finds the customer across the bank's systems, gathers the listed person's facts from fields, profile text and search results, then clears only on a contradiction, confirms only on agreement and otherwise asks for review. Every decision names the rule that decided it and cites the records behind it. The rules decide, with no model, no network and only the Python standard library. On the 819 development hits it clears 464, confirms 125 and sends 230 to review in under 10 seconds, gets 50 of 50 practice labels right with 0 unsafe clearances, and writes identical files in 5 fresh runs. Damaging the text 14 ways creates no clearance. On a real public sanctions list, 232142 known-answer cases, none is wrongly cleared. A viewer shows each hit as a side-by-side card and queues the reviews with the one fact that would settle each.
+A screening engine applies the bank's identity policy to each watchlist hit: it resolves the customer across bank systems, gathers the listed person's facts from fields, profiles and search results, then clears on a contradiction, confirms on agreement or asks for review. Every decision states its rule and cites the supporting records; the default path uses only the Python standard library, with no model or network. A viewer presents each hit beside its evidence and highlights missing information for an analyst. Development testing uses practice labels, repeated runs and damaged text, while historical public-list tests use synthetic cases; these checks do not establish unseen-set accuracy or replace validation of the final release.
 
 ## Links
 
@@ -30,17 +30,15 @@ A screening engine that decides, for every watchlist hit, whether the listed per
 - [ ] Member 2: full name, Cursor email, LinkedIn or X link
 - [ ] Member 3: full name, Cursor email, LinkedIn or X link
 - [ ] Member 4: full name, Cursor email, LinkedIn or X link
+- [ ] Member 5, if applicable: full name, Cursor email, LinkedIn or X link
+- [ ] Verify the public repository link and tick the form’s public-repository confirmation
 - [ ] The video link, set so that anyone with the link can watch it
 - [ ] Send the form before 17:00 London time
 
-## Where each number comes from
+## Validation provenance
 
-| Number | Command | What it printed |
-|---|---|---|
-| 819, 464, 125, 230, under 10 seconds | `python system/run DATA output/dev.jsonl` | `819 hits decided in 8.3s: DIFFERENT_ENTITY 464, REVIEW 230, SAME_ENTITY 125` |
-| 50 of 50, 0 unsafe | `python ROOM/validate.py --data DATA --output output/dev.jsonl --score DATA/practice_labels.jsonl` | `practice labels: 50 hits, 50 right decisions, 0 unsafe clearances` |
-| 5 runs | `python tools/repro.py DATA --runs 5 --strict` | `scored files byte-identical across 5 runs: yes` |
-| 14 ways | `python tools/stress.py DATA` | 14 rows, then `new clearances caused by harder text: none` |
-| 232142 | `python tools/public_test.py --people 30000 --companies 30000` | `232142 hits`, then `cleared when it should not be: 0` |
+Baseline results for `94b96fc` are in [release-readiness.md](release-readiness.md);
+final-release results remain pending. The earlier public-list and layer measurements in
+[results.md](results.md) are historical. Do not paste them into the form as final-release claims.
 
-The description is 1034 characters long (the form takes 20 to 1200).
+Description: 741 characters (including spaces; excluding heading and trailing newline). The [submission form](https://gb-fincrime-hackathon-11-2026.teamdeel.workers.dev/submit), fetched on 21 November 2026, specifies 20 to 1200 characters and suggests 2–4 sentences. It accepts 1–5 team members and requires confirmation that the repository is public.
