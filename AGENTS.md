@@ -84,6 +84,7 @@ python system/run DATA output/dev.jsonl                            # the scored 
 python system/run DATA output/dev.jsonl output/dev.explain.jsonl   # also write the explain file
 python ROOM/validate.py --data DATA --output output/dev.jsonl --score DATA/practice_labels.jsonl
 python tools/stress.py DATA                                        # reworded-text stress test
+python tools/loop.py DATA                                          # every check in order, and which hits a change moved
 python tools/ablate.py DATA --stress                               # compare every layer setting
 ```
 

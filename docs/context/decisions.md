@@ -32,12 +32,19 @@ the decision, and it keeps free-text reading in one place where it can be tested
 
 ## 3. When something cannot be read, it is unknown, and unknown means review
 
-**Decided** 12:03, widened 12:35 and 13:20.
+**Decided** 12:03, widened 12:35, 13:20 and 14:05.
 
 - A note the reader cannot read gives no fact. It does not give a guess.
 - An identity check that is found but whose date of birth cannot be read does not let the
   declared date of birth clear a hit. The declared date may differ from the verified one.
+- A check read out of a note may clear a hit only when the note can be believed: it names a
+  document if it sits outside the identity-check channel, its legal name shares a part with a
+  name the bank holds for the customer, and a person's date of birth falls at least 14 years
+  before it. Otherwise it may support a match and never clears. These are the three checks the
+  reader layer already made on what a model reads (decision 6).
 - A country string that cannot be resolved blocks a location clearance.
+- A country a support note only mentions, as a nationality word or in a note set aside as a
+  failed check, blocks a location clearance against that country. It is not a shared country.
 - A customer who cannot be found in the system of record cannot be cleared or confirmed on the
   screened details.
 - A hit that crashes the run still gets a `REVIEW` line.
@@ -45,6 +52,14 @@ the decision, and it keeps free-text reading in one place where it can be tested
 **Why.** The unseen set words its free text differently. Reading less must be able to cost a
 review and must never be able to cost a clearance. `tools/stress.py` damages the development
 text nine ways to prove it: some decisions change, and none becomes a new clearance.
+
+Reading wrong must not cost a clearance either. Those nine cases only take text away or reword
+it. Five more, added at 14:05, add text that can be misread: capitals that are not the legal
+name, a year that is not a birth date, words that make a support note read like a failed check,
+a country written as a nationality. On invented records the rules as they were cleared hits on
+all five. The two widenings above stop that. The five cases have not been run on the
+development set yet. Neither widening can create a clearance: each only takes away the power
+to clear.
 
 ## 4. Evidence lists only what decided the hit
 
