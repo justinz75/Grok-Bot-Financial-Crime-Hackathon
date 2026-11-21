@@ -1,6 +1,6 @@
 # Where things stand
 
-**Snapshot: 15:05 London time, 21 November 2026. The decision code under `system/screening/` last
+**Snapshot: 15:13 London time, 21 November 2026. The decision code under `system/screening/` last
 changed at commit `73ed186`.**
 
 This page goes out of date quickly. The live picture is always in git:
@@ -82,14 +82,43 @@ The stress test and the layer comparison are reported in [system/README.md](../.
 
 ## In progress
 
-The model layers are on `main` but off by default. They have only run against a stand-in model:
-no API key was available, so a real model is still unmeasured. That measurement is Teammate C's job.
+At 14:30 the owner asked the owner's session to finish the remaining team tasks itself. The
+traceability matrix, the results page, the demo script and the submission text are on `main`
+(see the table above). What is still open:
 
-| What | Who | Where | State at the snapshot |
-|---|---|---|---|
-| Model check, results table, demo script, submission text, video | Teammate C | branch `task/results`, not pushed yet | Handed off at 12:52. `tools/model_check.py` and `tools/ablate.py` are on `main`, so every job can start |
+| What | State at the snapshot |
+|---|---|
+| The model layers against a real model (`tools/model_check.py`, the model rows of `tools/ablate.py`) | Blocked: there is no OpenRouter key on the owner's machine. The layers stay off, and the scored run uses no model |
+| The 2-minute video | Not recorded. The shot list is [demo-script.md](../demo-script.md). It needs a person |
+| The submission form | Not sent. The text is in [submission.md](../submission.md); the personal details are the team's to fill in |
+| A hosted copy of the viewer | Needs GitHub Pages switched on in the repository settings, which only the repository's owner can do |
 
-The handoffs are `tasks/teammate-A-viewer.md`, `tasks/teammate-B-data.md` and
+**Two draft pull requests from a teammate are open and not merged.** Pull request 4 writes the
+scored reason and its evidence from the same grounds. Pull request 5 includes 4, reads the listed
+person's date of birth from more of the profile and from every search key, and treats a
+superseded document's country and a holiday as weak country evidence. The owner's session
+measured 5 with the data at commit `463f981`, at 15:12:
+
+- `python tools/loop.py DATA --baseline <main's output/dev.jsonl>`: `Ran 229 tests`, `0 of 819
+  hits changed decision or reason code, 0 moved into DIFFERENT_ENTITY, 35 changed only in reason
+  or evidence`, `50 hits, 50 right decisions, 0 unsafe clearances`, the same stress table as
+  `main` with `new clearances caused by harder text: none`, and five byte-identical runs.
+- All 35 changed reasons are on hits with several possible customers. They now describe each
+  candidate.
+- The cited evidence equals the reference list on 48 of the 50 practice labels. `main` has 50
+  of 50. The two that differ are the labelled hits whose customer is `AMBIGUOUS`: the reference
+  cites the identity checks that tie each candidate to the shared country, and the branch cites
+  the customer records only.
+- The branch was cut before `73ed186`, so it does not have the one-part-name rule, and
+  `system/screening/decide.py` will conflict. `python tools/public_test.py --people 30000
+  --companies 30000` on the branch prints the same table as on `main` except for that rule:
+  `cleared when it should not be: 21`, all 21 in the row for one-part names in another country.
+
+It should not be merged until the evidence equals the reference on 50 of 50 again and
+`output/dev.jsonl` has been regenerated on top of the current `main`. Whoever merges it must run
+`python tools/loop.py DATA` on the merged code first.
+
+The handoffs were `tasks/teammate-A-viewer.md`, `tasks/teammate-B-data.md` and
 `tasks/teammate-C-model-and-demo.md`.
 
 The viewer was redesigned by the owner at 14:20 (decision 11 in [decisions.md](decisions.md)).
@@ -121,8 +150,8 @@ This is the owner's timeline, set at 11:33. The first working version landed ear
 
 | Time | Work |
 |---|---|
-| until about 14:30 | Layers, viewer and data jobs, as listed above |
-| 14:30 to 15:30 | Measure the model layers. Keep one only if it helps and five runs agree. Confirm a run stays under 30 minutes |
+| until about 14:30 | Layers, viewer and data jobs, as listed above. Done |
+| 14:30 to 15:30 | Measure the model layers. Not done: no API key. Used instead for the stress test on real data, the public-list test and the fixes they led to |
 | 15:00 | Office hours with the mentors. Bring the open questions from [decisions.md](decisions.md) |
 | 15:30 to 16:15 | Final `system/README.md` and final `output/dev.jsonl` |
 | 16:15 to 16:45 | Record the 2-minute video, push, submit |
