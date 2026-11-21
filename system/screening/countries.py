@@ -165,7 +165,7 @@ MM|MMR|Myanmar; Burma; Myanmar (Burma)|Burmese
 NA|NAM|Namibia|Namibian
 NR|NRU|Nauru|Nauruan
 NP|NPL|Nepal|Nepali; Nepalese
-NL|NLD|Netherlands; The Netherlands; Holland; Kingdom of the Netherlands|Dutch
+NL|NLD|Netherlands; The Netherlands; Holland; Kingdom of the Netherlands; Netherlands, Kingdom of the|Dutch
 NC|NCL|New Caledonia|New Caledonian
 NZ|NZL|New Zealand; Aotearoa|New Zealander
 NI|NIC|Nicaragua|Nicaraguan
@@ -331,6 +331,12 @@ def resolve(value):
         return DEMONYMS[stripped]
     if key in NOT_COUNTRIES or stripped in NOT_COUNTRIES:
         return IGNORED
+    # the official lists write some names back to front: "Bahamas, The", "Congo, Republic of the"
+    head, comma, tail = _TAG.sub(" ", raw).partition(",")
+    if comma and "," not in tail:
+        turned = _key(tail + " " + head)
+        if turned in NAMES:
+            return NAMES[turned]
     return None
 
 

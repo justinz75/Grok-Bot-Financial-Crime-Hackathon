@@ -162,6 +162,19 @@ class Countries(unittest.TestCase):
         self.assertEqual(C.resolve(None), C.IGNORED)
         self.assertIsNone(C.resolve("Atlantis"))
 
+    def test_official_list_spellings(self):
+        # forms the ISO 3166 list uses that differ from everyday names
+        for text, code in [("Netherlands, Kingdom of the", "NL"), ("Bahamas, The", "BS"), ("Gambia, The", "GM"),
+                           ("Congo, Republic of the", "CG"), ("Korea, Republic of", "KR"),
+                           ("Türkiye", "TR"), ("Viet Nam", "VN"), ("Virgin Islands (U.S.)", "VI"),
+                           ("Åland Islands", "AX"), ("Curaçao", "CW")]:
+            self.assertEqual(C.resolve(text), code, text)
+        self.assertEqual(C.resolve("Kosovo"), "XK")  # not on the ISO list; kept because watchlists use it
+        # a place is not turned round into a country it is not
+        self.assertEqual(C.resolve_place("Georgia, United States"), "US")
+        self.assertIsNone(C.resolve("Springfield, Shelbyville"))
+        self.assertEqual(C.resolve_place("Mexico, New"), None)
+
     def test_places(self):
         self.assertEqual(C.resolve_place("Calle Mayor, 3, Madrid, Madrid, 28071, Spain [Business]"), "ES")
         self.assertEqual(C.resolve_place("United States [Associated]"), "US")
