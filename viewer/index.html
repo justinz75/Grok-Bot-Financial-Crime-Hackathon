@@ -1,0 +1,629 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'; script-src 'unsafe-inline'">
+  <title>Screening review</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      --background: #0a0a0a;
+      --surface: #141414;
+      --text: #ededed;
+      --muted: #aaa;
+      --line: #333;
+      --accent: #cc5533;
+      --mono: "Geist Mono", ui-monospace, monospace;
+      font-family: Geist, system-ui, sans-serif;
+    }
+
+    * { box-sizing: border-box; }
+    [hidden] { display: none !important; }
+    body { margin: 0; background: var(--background); color: var(--text); }
+    main { width: min(100% - 3rem, 72rem); margin: 3rem auto; }
+    h1 { margin: 0 0 1.75rem; font-size: clamp(1.85rem, 4vw, 2.75rem); letter-spacing: -.04em; }
+    h2 { margin: 0 0 1rem; font-size: 1.125rem; }
+    section { margin-bottom: 2rem; }
+    .files, .counts { display: grid; gap: 1px; margin: 0; background: var(--line); border: 1px solid var(--line); }
+    .files { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+    .counts { grid-template-columns: repeat(4, minmax(0, 1fr)); border-top: 2px solid var(--accent); }
+    .file, .count { min-width: 0; padding: 1.25rem; background: var(--surface); }
+    label { display: block; margin-bottom: .75rem; font-weight: 600; }
+    label span, dt { color: var(--muted); font-size: .875rem; }
+    label span { margin-left: .35rem; font-weight: 400; }
+    input { width: 100%; font: inherit; font-size: .875rem; }
+    input::file-selector-button {
+      margin-right: .65rem;
+      padding: .45rem .7rem;
+      border: 1px solid #555;
+      border-radius: 0;
+      background: #222;
+      color: var(--text);
+      cursor: pointer;
+    }
+    input::file-selector-button:hover { border-color: var(--accent); }
+    :focus-visible { outline: 2px solid #ef8c70; outline-offset: 3px; }
+    .status { margin: .65rem 0 0; color: var(--muted); font-size: .875rem; overflow-wrap: anywhere; }
+    .status:empty { margin: 0; }
+    .status[data-error] { color: #ff9a83; }
+    .status[data-warning] { color: #f2c675; }
+    dd { margin: .4rem 0 0; font: 600 2rem/1 var(--mono); }
+    .filters { display: grid; grid-template-columns: 1fr 1.25fr 1.5fr; gap: .75rem; }
+    .filters label { margin-bottom: .4rem; font-size: .875rem; }
+    .filters input, select, button {
+      font: inherit;
+      color: var(--text);
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 0;
+    }
+    .filters input, select { width: 100%; min-height: 2.6rem; padding: .5rem .65rem; }
+    .results { margin: 1rem 0; color: var(--muted); font-size: .875rem; }
+    .alerts { display: grid; gap: .75rem; }
+    .alert { border: 1px solid var(--line); background: var(--surface); }
+    .alert > summary { padding: .9rem 1rem; cursor: pointer; }
+    .alert > summary:hover { background: #1d1d1d; }
+    .alert > summary::marker { color: #ef8c70; }
+    code, .bits { font-family: var(--mono); overflow-wrap: anywhere; }
+    .bits { white-space: nowrap; }
+    .alert > summary code { margin-left: .35rem; font-weight: 700; }
+    .alert-meta { float: right; display: inline-flex; align-items: center; gap: .7rem; color: var(--muted); font-size: .875rem; }
+    .tag { display: inline-block; padding: .18rem .48rem; border: 1px solid currentColor; border-radius: 1rem; font-size: .8rem; font-weight: 600; line-height: 1.3; }
+    .positive, .DIFFERENT_ENTITY, .agree { color: #9bd3aa; }
+    .negative, .SAME_ENTITY, .mismatch { color: #ffa59a; }
+    .attention, .REVIEW { color: #f2c675; }
+    .unknown { color: var(--muted); }
+    .hit { padding: 1rem; border-top: 1px solid var(--line); background: #101010; overflow-wrap: anywhere; }
+    .hit h3 { margin: 0 0 .6rem; font-size: 1rem; }
+    .verdict { display: flex; align-items: center; flex-wrap: wrap; gap: .5rem .75rem; }
+    .reason { margin: .8rem 0; line-height: 1.55; }
+    .reason span { display: block; }
+    .customer { margin: 0; color: var(--muted); font-size: .875rem; }
+    .evidence { display: flex; flex-wrap: wrap; gap: .35rem; margin: .65rem 0 0; padding: 0; list-style: none; }
+    .evidence li { padding: .18rem .4rem; border: 1px solid var(--line); background: var(--surface); font-size: .8rem; }
+    .explain { margin-top: 1rem; border: 1px solid var(--line); background: var(--surface); }
+    .explain > summary { padding: .7rem .85rem; cursor: pointer; font-weight: 600; }
+    .explain > summary::marker { color: #ef8c70; }
+    .explain-body { padding: 0 .85rem .85rem; }
+    .comparison { width: 100%; table-layout: fixed; border-collapse: collapse; font-size: .9rem; }
+    .comparison th, .comparison td { padding: .55rem .35rem; border-bottom: 1px solid var(--line); text-align: left; vertical-align: top; }
+    .comparison thead th:first-child { width: 25%; }
+    .comparison th .tag { display: table; margin-top: .25rem; }
+    .person-tabs { display: flex; flex-wrap: wrap; gap: .4rem; margin: 0 0 .75rem; }
+    .person-tabs button { padding: .45rem .65rem; cursor: pointer; }
+    .person-tabs button[aria-selected="true"] { color: #ffb096; border-color: var(--accent); }
+    .explain-section { margin: 1rem 0 0; }
+    .explain-section h4 { margin: 0 0 .45rem; font-size: 1rem; }
+    .explain-section h5 { margin: .7rem 0 .25rem; font-size: .875rem; }
+    .explain-section p { margin: .35rem 0; }
+    .explain-section ul { margin: .25rem 0; padding-left: 1.2rem; }
+    .explain-section li + li { margin-top: .2rem; }
+    .contribution { display: grid; grid-template-columns: minmax(6rem, .8fr) minmax(6rem, 1fr) 5.5rem minmax(8rem, 1.7fr); gap: .55rem; align-items: center; padding: .35rem 0; font-size: .875rem; }
+    .bar { display: flex; height: .58rem; background: #252525; }
+    .half { display: flex; width: 50%; }
+    .half:first-child { justify-content: flex-end; border-right: 1px solid #959595; }
+    .fill { background: #89c99d; }
+    .half:first-child .fill { background: #e28171; }
+    .notice { margin: 0 0 .75rem; padding: .55rem .7rem; border-left: 2px solid var(--accent); background: #282017; color: #f2c675; }
+    .explain-section .notice { margin-top: .65rem; }
+    .hit > .notice { margin: 1rem 0 0; }
+
+    @media (max-width: 42rem) {
+      main { width: calc(100% - 2rem); margin-top: 2rem; }
+      .counts { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .filters { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+      .filters > :last-child { grid-column: 1 / -1; }
+      .contribution { grid-template-columns: minmax(5rem, 1fr) minmax(4rem, 1fr) 5.5rem; }
+      .contribution > :last-child { grid-column: 1 / -1; color: var(--muted); }
+    }
+    @media (max-width: 32rem) {
+      .files { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <main>
+    <h1>Screening review</h1>
+
+    <section aria-labelledby="files-heading">
+      <h2 id="files-heading">Run files</h2>
+      <div class="files">
+        <div class="file">
+          <label for="scored-file">Scored file <span>Required</span></label>
+          <input id="scored-file" type="file" accept=".jsonl,.ndjson,.txt" required aria-describedby="scored-status">
+          <p id="scored-status" class="status" role="status"></p>
+        </div>
+        <div class="file">
+          <label for="explain-file">Explain file <span>Optional</span></label>
+          <input id="explain-file" type="file" accept=".jsonl,.ndjson,.txt" aria-describedby="explain-status">
+          <p id="explain-status" class="status" role="status"></p>
+        </div>
+      </div>
+    </section>
+
+    <section id="summary" aria-labelledby="summary-heading" hidden>
+      <h2 id="summary-heading">Decision summary</h2>
+      <dl class="counts">
+        <div class="count"><dt>Total hits</dt><dd id="total">0</dd></div>
+        <div class="count"><dt>Different entity</dt><dd id="DIFFERENT_ENTITY">0</dd></div>
+        <div class="count"><dt>Same entity</dt><dd id="SAME_ENTITY">0</dd></div>
+        <div class="count"><dt>Review</dt><dd id="REVIEW">0</dd></div>
+      </dl>
+    </section>
+
+    <section id="queue" aria-labelledby="queue-heading" hidden>
+      <h2 id="queue-heading">Alerts</h2>
+      <div class="filters">
+        <div>
+          <label for="decision-filter">Decision</label>
+          <select id="decision-filter">
+            <option value="">All decisions</option>
+            <option value="DIFFERENT_ENTITY">Different · cleared</option>
+            <option value="SAME_ENTITY">Same · to compliance</option>
+            <option value="REVIEW">Needs a person</option>
+          </select>
+        </div>
+        <div>
+          <label for="reason-filter">Reason code</label>
+          <select id="reason-filter"><option value="">All reason codes</option></select>
+        </div>
+        <div>
+          <label for="id-filter">Alert or hit ID</label>
+          <input id="id-filter" type="search" placeholder="Search IDs" spellcheck="false">
+        </div>
+      </div>
+      <p id="results" class="results" role="status"></p>
+      <div id="alerts" class="alerts"></div>
+    </section>
+  </main>
+  <script>
+    const decisions = ["DIFFERENT_ENTITY", "SAME_ENTITY", "REVIEW"];
+    const verdicts = {
+      DIFFERENT_ENTITY: "Different · cleared",
+      SAME_ENTITY: "Same · to compliance",
+      REVIEW: "Needs a person"
+    };
+    const summary = document.getElementById("summary");
+    const queue = document.getElementById("queue");
+    const alertList = document.getElementById("alerts");
+    const decisionFilter = document.getElementById("decision-filter");
+    const reasonFilter = document.getElementById("reason-filter");
+    const idFilter = document.getElementById("id-filter");
+    const explainStatus = document.getElementById("explain-status");
+    // The largest weight one fact carries. Every bar is drawn against it, so the same length
+    // means the same weight on every card.
+    const BAR_FULL = 14;
+    // How the system starts a sentence in a reason, and short forms that end in a full stop.
+    const sentenceOpeners = /^(?:The|Both|Nothing|Every|Each|They|No|Without|This|\d)/;
+    const shortForms = new Set(["inc", "ltd", "co", "corp", "st", "dr", "mr", "mrs", "ms", "jr", "sr", "mt", "vs"]);
+    let alertGroups = [];
+    let explainByAlert = new Map();
+    let explainCount = 0;
+    // Alerts the reader opened or closed by hand, by alert ID.
+    let manualOpen = new Map();
+
+    function parseJsonl(text, validate) {
+      const rows = [];
+      for (const [index, line] of text.split(/\r?\n/).entries()) {
+        if (!line.trim()) continue;
+        let row;
+        try {
+          row = JSON.parse(line);
+        } catch {
+          throw new Error(`Line ${index + 1} contains invalid JSON.`);
+        }
+        if (!row || typeof row !== "object" || Array.isArray(row) || !validate(row)) {
+          throw new Error(`Line ${index + 1} has an invalid record.`);
+        }
+        rows.push(row);
+      }
+      return rows;
+    }
+
+    function renderSummary(rows) {
+      const counts = new Map(decisions.map(decision => [decision, 0]));
+      for (const { decision } of rows) {
+        counts.set(decision, counts.get(decision) + 1);
+      }
+      document.getElementById("total").textContent = rows.length;
+      for (const [decision, count] of counts) {
+        document.getElementById(decision).textContent = count;
+      }
+      summary.hidden = false;
+    }
+
+    function element(tag, className, text) {
+      const node = document.createElement(tag);
+      if (className) node.className = className;
+      if (text !== undefined) node.textContent = text;
+      return node;
+    }
+
+    function compareIds(left, right) {
+      return left < right ? -1 : left > right ? 1 : 0;
+    }
+
+    // Split a reason into its sentences. A full stop after an initial or a short form
+    // ("Carl E. Andersen", "Acme Inc. (UK)") ends a sentence only when one of the system's
+    // own sentence openers follows it.
+    function sentencesOf(text) {
+      const parts = [];
+      const boundary = /[.!?]+(?=\s+\S)/g;
+      let start = 0;
+      let match;
+      while ((match = boundary.exec(text)) !== null) {
+        const end = match.index + match[0].length;
+        const word = text.slice(start, match.index).split(/\s+/).pop().replace(/^[^\p{L}\p{N}]+/u, "");
+        const short = /^\p{L}$/u.test(word) || /^(?:\p{L}\.)+\p{L}$/u.test(word) || shortForms.has(word.toLowerCase());
+        if (match[0] === "." && short && !sentenceOpeners.test(text.slice(end).trimStart())) continue;
+        parts.push(text.slice(start, end).trim());
+        start = end;
+      }
+      const rest = text.slice(start).trim();
+      if (rest) parts.push(rest);
+      return parts;
+    }
+
+    // An explain row written for another decision means the two files come from different runs.
+    function disagrees(row, hit) {
+      return (typeof row.decision === "string" && row.decision !== hit.decision) ||
+        (typeof row.reason_code === "string" && row.reason_code !== hit.reason_code);
+    }
+
+    // The explain status line: how many records, and how they line up with the scored file.
+    function describeExplain() {
+      explainStatus.removeAttribute("data-warning");
+      if (!explainCount) return "";
+      let text = `${explainCount} ${explainCount === 1 ? "record" : "records"} loaded.`;
+      if (!alertGroups.length) return text;
+      let total = 0;
+      let matched = 0;
+      let differing = 0;
+      for (const group of alertGroups) {
+        for (const hit of group.hits) {
+          total += 1;
+          const row = explainByAlert.get(hit.alert_id)?.get(hit.hit_id);
+          if (!row) continue;
+          matched += 1;
+          if (disagrees(row, hit)) differing += 1;
+        }
+      }
+      text += ` ${matched} of ${total} scored hits have an explanation.`;
+      if (differing) {
+        text += ` ${differing} ${differing === 1 ? "was" : "were"} written for a different decision, so this file may come from another run.`;
+      } else if (!matched) {
+        text += " This file may come from another run.";
+      }
+      if (differing || !matched) explainStatus.setAttribute("data-warning", "");
+      return text;
+    }
+
+    function loadScored(rows) {
+      const groups = new Map();
+      for (const hit of rows) {
+        if (!groups.has(hit.alert_id)) groups.set(hit.alert_id, []);
+        groups.get(hit.alert_id).push(hit);
+      }
+      alertGroups = Array.from(groups, ([id, hits]) => ({
+        id,
+        hits: hits.sort((left, right) => compareIds(left.hit_id, right.hit_id)),
+        closed: hits.every(hit => hit.decision === "DIFFERENT_ENTITY")
+      })).sort((left, right) => compareIds(left.id, right.id));
+
+      decisionFilter.value = "";
+      idFilter.value = "";
+      manualOpen = new Map();
+      const codes = [...new Set(rows.map(hit => hit.reason_code))].sort(compareIds);
+      reasonFilter.replaceChildren(new Option("All reason codes", ""),
+        ...codes.map(code => new Option(code, code)));
+      renderSummary(rows);
+      queue.hidden = false;
+      renderAlerts();
+      if (explainCount) explainStatus.textContent = describeExplain();
+    }
+
+    function loadExplain(rows) {
+      explainByAlert = new Map();
+      explainCount = rows.length;
+      for (const row of rows) {
+        if (!explainByAlert.has(row.alert_id)) explainByAlert.set(row.alert_id, new Map());
+        explainByAlert.get(row.alert_id).set(row.hit_id, row);
+      }
+      if (!queue.hidden) renderAlerts();
+      return describeExplain();
+    }
+
+    function renderAlerts() {
+      const decision = decisionFilter.value;
+      const reasonCode = reasonFilter.value;
+      const query = idFilter.value.trim().toLowerCase();
+      // With a filter on, the matching hits are what the reader asked for, so their alerts
+      // open. An alert opened or closed by hand keeps that state until another file is loaded.
+      const openByDefault = Boolean(decision || reasonCode || query) || alertGroups.length <= 25;
+      const nodes = [];
+      let hitCount = 0;
+
+      for (const group of alertGroups) {
+        const matchesAlert = group.id.toLowerCase().includes(query);
+        const hits = group.hits.filter(hit =>
+          (!decision || hit.decision === decision) &&
+          (!reasonCode || hit.reason_code === reasonCode) &&
+          (matchesAlert || hit.hit_id.toLowerCase().includes(query)));
+        if (!hits.length) continue;
+        hitCount += hits.length;
+
+        const alert = element("details", "alert");
+        alert.dataset.alertId = group.id;
+        const heading = element("summary");
+        const meta = element("span", "alert-meta");
+        const count = hits.length === group.hits.length ? hits.length : `${hits.length} of ${group.hits.length}`;
+        meta.append(element("span", "", `${count} ${count === 1 ? "hit" : "hits"}`),
+          element("span", `tag ${group.closed ? "positive" : "attention"}`, group.closed ? "Closed" : "Open"));
+        heading.append(element("code", "", group.id), meta);
+        alert.append(heading);
+        alert.open = manualOpen.get(group.id) ?? openByDefault;
+        heading.addEventListener("click", () => manualOpen.set(group.id, !alert.open));
+        alert.append(...hits.map(renderHit));
+        nodes.push(alert);
+      }
+
+      alertList.replaceChildren(...nodes);
+      document.getElementById("results").textContent = hitCount
+        ? `${hitCount} ${hitCount === 1 ? "hit" : "hits"} in ${nodes.length} ${nodes.length === 1 ? "alert" : "alerts"}`
+        : "No hits match these filters.";
+    }
+
+    function renderHit(hit) {
+      const card = element("article", "hit");
+      card.dataset.hitId = hit.hit_id;
+      const heading = element("h3");
+      heading.append(element("code", "", hit.hit_id));
+      const verdict = element("div", "verdict");
+      verdict.append(element("span", `tag ${hit.decision}`, verdicts[hit.decision]),
+        element("code", "", hit.reason_code));
+
+      const reason = element("p", "reason");
+      for (const sentence of sentencesOf(hit.reason)) reason.append(element("span", "", sentence));
+
+      const customer = element("p", "customer", "Customer record ");
+      customer.append(element(hit.customer_record_id === null ? "span" : "code", "",
+        hit.customer_record_id ?? "none found"));
+      card.append(heading, verdict, reason, customer);
+
+      if (hit.evidence.length) {
+        const evidence = element("ul", "evidence");
+        evidence.setAttribute("aria-label", "Evidence records");
+        for (const record of hit.evidence) {
+          const chip = element("li");
+          chip.append(element("code", "", record));
+          evidence.append(chip);
+        }
+        card.append(evidence);
+      }
+
+      const explanation = explainByAlert.get(hit.alert_id)?.get(hit.hit_id);
+      if (explanation) {
+        if (disagrees(explanation, hit)) {
+          card.append(element("p", "notice", `This explanation was written for ${explanation.decision}, ` +
+            `${explanation.reason_code}, not for the decision above. The explain file may come from another run.`));
+        }
+        card.append(renderExplain(explanation));
+      }
+      return card;
+    }
+
+    function renderExplain(explanation) {
+      const panel = element("details", "explain");
+      panel.open = true;
+      const body = element("div", "explain-body");
+      panel.append(element("summary", "", "Explanation"), body);
+      if (explanation.changed_by) {
+        const { layer, why } = explanation.changed_by;
+        body.append(element("p", "notice", `Changed to review by the ${layer} layer: ${why}`));
+      }
+      const people = explanation.people;
+      if (!people.length) body.append(element("p", "", "No comparison was made for this hit."));
+      if (people.length === 1) body.append(renderPerson(people[0]));
+      if (people.length > 1) {
+        const tabList = element("div", "person-tabs");
+        tabList.setAttribute("role", "tablist");
+        tabList.setAttribute("aria-label", "People compared");
+        const content = element("div");
+        const key = `person-${encodeURIComponent(JSON.stringify([explanation.alert_id, explanation.hit_id]))}`;
+        content.id = `${key}-panel`;
+        content.setAttribute("role", "tabpanel");
+        content.tabIndex = 0;
+        const tabs = people.map((_, index) => {
+          const button = element("button", "", `Person ${index + 1}`);
+          button.type = "button";
+          button.id = `${key}-${index + 1}`;
+          button.setAttribute("role", "tab");
+          button.setAttribute("aria-controls", content.id);
+          button.addEventListener("click", () => selectPerson(index));
+          return button;
+        });
+        function selectPerson(index) {
+          tabs.forEach((tab, position) => {
+            tab.setAttribute("aria-selected", String(position === index));
+            tab.tabIndex = position === index ? 0 : -1;
+          });
+          content.setAttribute("aria-labelledby", tabs[index].id);
+          content.replaceChildren(renderPerson(people[index]));
+        }
+        tabList.addEventListener("keydown", event => {
+          const index = tabs.indexOf(event.target);
+          if (index === -1) return;
+          const keyboardTargets = {
+            ArrowLeft: (index + tabs.length - 1) % tabs.length,
+            ArrowRight: (index + 1) % tabs.length,
+            Home: 0,
+            End: tabs.length - 1
+          };
+          if (!Object.hasOwn(keyboardTargets, event.key)) return;
+          event.preventDefault();
+          const next = keyboardTargets[event.key];
+          selectPerson(next);
+          tabs[next].focus();
+        });
+        tabList.append(...tabs);
+        body.append(tabList, content);
+        selectPerson(0);
+      }
+      return panel;
+    }
+
+    function renderPerson(person) {
+      const { customer, hit, states, score, briefing, review } = person;
+      const countries = values => values?.map(country => country.name || country.code).join(", ");
+      const comparisons = [
+        ["Name", customer.verified_name || customer.names?.[0], hit.name, states.name],
+        ["Date of birth", customer.dob, hit.dobs?.join(", "), states.dob],
+        ["Countries", countries(customer.countries), countries(hit.countries), states.location]
+      ];
+      const labels = { agree: "Agrees", mismatch: "Differs", unknown: "Unknown" };
+      const content = element("div");
+      const table = element("table", "comparison");
+      const head = table.createTHead().insertRow();
+      for (const label of ["", "Our customer", "List entry"]) {
+        const header = element("th", "", label);
+        header.scope = "col";
+        head.append(header);
+      }
+      const body = table.createTBody();
+      for (const [field, ours, theirs, state] of comparisons) {
+        const row = body.insertRow();
+        const heading = element("th", "", field);
+        heading.scope = "row";
+        heading.append(element("span", `tag ${state}`, labels[state]));
+        row.append(heading, element("td", "", ours || "Unknown"), element("td", "", theirs || "Unknown"));
+      }
+      content.append(table);
+      if (score) content.append(renderScore(score));
+      if (briefing) content.append(renderBriefing(briefing));
+      if (review) {
+        const section = element("section", "explain-section");
+        section.append(element("h4", "", "Second opinion"), element("p", "", review.verdict),
+          element("p", "", review.reason),
+          element("p", "", `agreed in ${Math.round(review.agreement * review.runs)} of ${review.runs} runs`));
+        content.append(section);
+      }
+      return content;
+    }
+
+    function renderScore(score) {
+      const section = element("section", "explain-section");
+      section.append(element("h4", "", "Strength of evidence"), element("p", "", score.band));
+      for (const { field, bits, detail } of score.contributions) {
+        const row = element("div", "contribution");
+        const bar = element("span", "bar");
+        bar.setAttribute("aria-hidden", "true");
+        const left = element("span", "half");
+        const right = element("span", "half");
+        const fill = element("span", "fill");
+        fill.style.width = `${Math.min(Math.abs(bits), BAR_FULL) / BAR_FULL * 100}%`;
+        (bits < 0 ? left : right).append(fill);
+        bar.append(left, right);
+        row.append(element("span", "", field), bar,
+          element("span", "bits", `${bits > 0 ? "+" : ""}${bits} ${Math.abs(bits) === 1 ? "bit" : "bits"}`),
+          element("span", "", detail));
+        section.append(row);
+      }
+      if (score.conflict) {
+        section.append(element("p", "notice", "Cleared by policy, but the evidence leans the other way"));
+      }
+      return section;
+    }
+
+    function renderBriefing(briefing) {
+      const section = element("section", "explain-section");
+      section.append(element("h4", "", "Briefing"), element("h5", "", briefing.headline));
+      for (const [key, label] of [
+        ["decided_by", "Decided by"], ["missing", "Missing"],
+        ["would_settle", "Would settle"], ["caveats", "Caveats"]
+      ]) {
+        const entries = briefing[key];
+        if (!entries.length) continue;
+        const list = element("ul");
+        list.append(...entries.map(entry => element("li", "", entry)));
+        section.append(element("h5", "", label), list);
+      }
+      return section;
+    }
+
+    function bindFilePicker(id, validate, onLoad, onReset = () => {}) {
+      const input = document.getElementById(`${id}-file`);
+      const status = document.getElementById(`${id}-status`);
+      let selection = 0;
+      input.addEventListener("change", async () => {
+        const currentSelection = ++selection;
+        const [file] = input.files;
+        onReset();
+        status.removeAttribute("data-error");
+        status.removeAttribute("data-warning");
+        input.removeAttribute("aria-invalid");
+        status.textContent = file ? "Reading file…" : "";
+        if (!file) return;
+
+        try {
+          const text = await file.text();
+          if (currentSelection !== selection) return;
+          const rows = parseJsonl(text, validate);
+          const described = onLoad(rows);
+          status.textContent = described || `${rows.length} ${rows.length === 1 ? "record" : "records"} loaded.`;
+        } catch (error) {
+          if (currentSelection !== selection) return;
+          status.setAttribute("data-error", "");
+          input.setAttribute("aria-invalid", "true");
+          status.textContent = error instanceof Error ? error.message : "Could not read the file.";
+        }
+      });
+    }
+
+    function hasIds(row) {
+      return typeof row.hit_id === "string" && typeof row.alert_id === "string";
+    }
+
+    function isScoredRow(row) {
+      return hasIds(row) && decisions.includes(row.decision) &&
+        typeof row.reason_code === "string" && typeof row.reason === "string" &&
+        (row.customer_record_id === null || typeof row.customer_record_id === "string") &&
+        Array.isArray(row.evidence) && row.evidence.every(record => typeof record === "string");
+    }
+
+    function isExplainPerson(person) {
+      if (!person?.customer || !person.hit || !person.states) return false;
+      const { customer, hit, states, score, briefing, review } = person;
+      const isListOrUnknown = value => value == null || Array.isArray(value);
+      if (![customer.names, customer.countries, hit.dobs, hit.countries].every(isListOrUnknown)) return false;
+      const countries = [...(customer.countries ?? []), ...(hit.countries ?? [])];
+      if (!countries.every(country => country && typeof country === "object")) return false;
+      if (![states.name, states.dob, states.location].every(state => ["agree", "mismatch", "unknown"].includes(state))) {
+        return false;
+      }
+      if (score && (!Array.isArray(score.contributions) ||
+        !score.contributions.every(item => Number.isFinite(item?.bits)))) return false;
+      if (briefing && !["decided_by", "missing", "would_settle", "caveats"].every(key => Array.isArray(briefing[key]))) {
+        return false;
+      }
+      return !review || (Number.isFinite(review.agreement) && Number.isInteger(review.runs));
+    }
+
+    function isExplainRow(row) {
+      return hasIds(row) && Array.isArray(row.people) && row.people.every(isExplainPerson);
+    }
+
+    bindFilePicker("scored", isScoredRow, loadScored, () => {
+      summary.hidden = true;
+      queue.hidden = true;
+      alertGroups = [];
+      alertList.replaceChildren();
+      if (explainCount) explainStatus.textContent = describeExplain();
+    });
+    bindFilePicker("explain", isExplainRow, loadExplain, () => loadExplain([]));
+    decisionFilter.addEventListener("change", () => renderAlerts());
+    reasonFilter.addEventListener("change", () => renderAlerts());
+    idFilter.addEventListener("input", () => renderAlerts());
+  </script>
+</body>
+</html>
