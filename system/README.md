@@ -190,11 +190,11 @@ whose identity notes print the legal name without capitals:
 
 | Setting | Decisions that differ from the clean run | Practice score | New clearances |
 |---|---|---|---|
-| rules only | 35 of 819 | 97.2 | 0 |
-| reader on (may support, never clear) | 35 of 819 | 97.2 | 0 |
-| reader enforce (counts in full) | 1 of 819 | 100 | 0 |
+| rules only | 36 of 819 | 97.2 | 0 |
+| reader on (may support, never clear) | 36 of 819 | 97.2 | 0 |
+| reader enforce (counts in full) | 2 of 819 | 100 | 0 |
 
-The rules degrade safely: 23 clearances fall back to review and nothing is wrongly cleared. A
+The rules degrade safely: 24 clearances fall back to review and nothing is wrongly cleared. A
 reader that is trusted gets them back. That result is from the stand-in, which reads capitalised
 words; a real model still has to earn it, and `tools/ablate.py --runs 5 --stress` is how.
 
@@ -295,6 +295,9 @@ python -m unittest discover -s system/tests
 | `test_wording.py` | 15 whole-run cases of text that can be misread: capitals that are not the legal name, a year that is not a birth date, a country written as a nationality. None may clear a hit, and the controls check that a real check still does |
 | `test_layers.py` | The three layer guarantees |
 | `test_layer_*.py` | Each layer on its own |
+
+Every rule of the policy is mapped to its function and its tests in
+[docs/traceability.md](../docs/traceability.md): 31 rules, none without a test.
 
 Every name and record in the tests is invented. `tools/stress.py` damages the real free text 14
 ways. Nine take text away or reword it, and on the development set none of them creates a
