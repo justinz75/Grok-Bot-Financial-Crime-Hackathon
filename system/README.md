@@ -63,7 +63,8 @@ separate explain file, and cannot create a clearance.
    the note can be believed: outside the identity-check channel it must name a document, its
    legal name must share a part with a name the bank holds for the customer, and a person's date
    of birth must fall at least 14 years before the note. Otherwise what it says may support a
-   match and never clears one.
+   match and never clears one. A doubtful support note supplies the latest check only when
+   there is no other kind of check.
 5. **Countries.** Take residence and nationality from every customer record and the document
    country from the latest approved check. Explicit travel-only mentions and superseded documents
    can block a location clearance when the hit is linked to that country. Other country mentions
@@ -248,12 +249,12 @@ Evidence: `CUS-783545`, `KYC-80B445`.
   clear one.
 - **Unknown countries.** A country string we cannot resolve blocks a location clearance instead
   of being ignored.
-- **A doubtful note still stands in front of a real check.** When a later note reads like an
-  identity check and cannot be believed, it no longer clears a hit, but it is still taken as the
-  latest check. Most hits an earlier real check would have decided then go to review. Measured
-  on the development set with a misleading sentence added to every support note, two went the
-  wrong way instead: the real check's date of birth agreed with the hit, the note hid it, and a
-  country difference then cleared the hit. Four clearances also became matches.
+- **A doubtful note in the identity-check channel still stands in front of an earlier check.**
+  It is a real check read with doubt, so it stays the latest one and cannot clear a hit; a hit
+  the earlier check would have decided then goes to review, or to a match when the declared
+  name and date agree. A doubtful support note is different: it no longer stands in front of
+  any other check. Where a doubtful support note is the only check there is, its date still
+  takes the place of the declared date of birth.
 - **A city without its country is not read.** "Lived in Lagos" ties the customer to no country,
   so a location clearance against Nigeria still goes through.
 - **The model layers are unproven.** They are built, tested and compared against a stand-in, not a
@@ -283,9 +284,10 @@ Every name and record in the tests is invented. `tools/stress.py` damages the re
 ways. Nine take text away or reword it, and on the development set none of them creates a
 clearance. Five add text that can be misread, the same wordings as `test_wording.py`. On the
 development set, the rules as they were turned 129, 10, 28, 41 and 40 reviews or matches into
-clearances on those five. The rules as they are turn 0, 0, 2, 0 and 0. The two that remain are
-described under "What is missing". The same five also turn 7, 1, 4, 0 and 0 clearances into
-matches, which sends a hit to compliance that the undamaged text would have cleared.
+clearances on those five. The rules as they are turn none on any of the 14, and on four of
+the five every decision is the one the undamaged text gives. The fifth, a status in capitals
+in front of each identity check, sends 13 decisions to review and turns one clearance into a
+match.
 
 `python tools/loop.py DATA` is the loop to iterate with. It runs the tests, lists every hit a
 change moved against the committed predictions and fails if one moved into a clearance, scores

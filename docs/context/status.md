@@ -1,7 +1,7 @@
 # Where things stand
 
-**Snapshot: 14:31 London time, 21 November 2026. The decision code under `system/screening/` last
-changed at commit `10b7575`, the merge of pull request 3.**
+**Snapshot: 14:41 London time, 21 November 2026. The decision code under `system/screening/` last
+changed at commit `f91cb9e`.**
 
 This page goes out of date quickly. The live picture is always in git:
 
@@ -14,7 +14,7 @@ git branch -r                     # which task branches have been pushed
 If you change the state of a task, update this page in the same pull request.
 
 The `task/screening-improvements` draft includes the follow-up fixes from the PR #5 review.
-The unit suite passed 226 tests and the official validator accepted all 819 development
+The unit suite passed 229 tests and the official validator accepted all 819 development
 predictions, with 50 right decisions on the practice labels. Compared with a fresh run on
 `main` at `7755807`, no verdict, reason code or customer record changed. The longest ambiguous
 reason on the draft dropped from 1555 to 941 characters, and all ambiguous reasons fit the
@@ -23,13 +23,13 @@ four-sentence budget.
 ## Numbers to expect
 
 The tests, the run, the validator, the practice-label score, the five-run check and the stress
-test below were run at `10b7575`, the merge of pull request 3. The
+test below were run on the commit named above. The
 country check and the workflow line are from the commits they name. If you see something
 different, stop and report it.
 
 | Command | What it printed |
 |---|---|
-| `python -m unittest discover -s system/tests` | `Ran 202 tests`, `OK` |
+| `python -m unittest discover -s system/tests` | `Ran 205 tests`, `OK` |
 | `python tools/make_viewer_sample.py --check` | `the sample is up to date` |
 | `python system/run DATA <file>` | `819 hits decided in 6.9s: DIFFERENT_ENTITY 464, REVIEW 230, SAME_ENTITY 125` |
 | the same run, second line | `layers: score=on, reviewer=off, briefing=on, reader=off` |
@@ -40,8 +40,9 @@ different, stop and report it.
 | evidence list compared with the reference list on the practice labels | equal on 50 of 50 |
 | `python tools/repro.py DATA --runs 5 --strict` | 5 fresh processes with hash seeds `random`, 1, 2, 3, 4: `hits whose decision or reason code differs between runs: 0`, scored and explain files `byte-identical across 5 runs: yes`, `committed output/dev.jsonl equals a fresh run: yes`, exit code 0 |
 | the scored file's SHA-256, from the same command | `c23adcc75543dca9c8534cfe3b613edfa28a0e4921856885596c610dd9e97bc1` |
-| `python tools/stress.py DATA` | 14 cases. The nine that take text away or reword it: `NEW CLEAR` 0 on every row. The five that add misleading text: `NEW CLEAR` 0, 0, 2, 0, 0, so it ends `new clearances caused by harder text: UP TO 2, investigate` and exits 1. Before pull request 3 the same five printed 129, 10, 28, 41 and 40 |
-| `python tools/loop.py DATA` | steps 1, 2, 3 and 5 `PASS`; step 4 (stress) `FAIL` for the two clearances above; step 6 skipped until `data/public_demo` is built |
+| `python tools/stress.py DATA` | 14 cases, `NEW CLEAR` 0 on every row, ending `new clearances caused by harder text: none`. The five cases that add misleading text printed 129, 10, 28, 41 and 40 before pull request 3, and 0, 0, 2, 0, 0 at its merge |
+| `python tools/loop.py DATA` | all six steps `PASS`, exit code 0: `0 of 819 hits changed decision or reason code, 0 moved into DIFFERENT_ENTITY, 0 changed only in reason or evidence`, and `18 of 18 demo cases came out as built` |
+| `python tools/make_public_demo.py` on the OpenSanctions export in [data-sources.md](../data-sources.md), SHA-256 checked | `Wrote 18 demo cases from 6 OpenSanctions profiles` |
 | `python tools/check_countries.py <the ISO 3166 list>` | `249 countries checked, 0 problems`. It also prints `EXTRA CODE XK (Kosovo)`: Kosovo is not on the ISO list and is kept on purpose, because watchlists use it |
 | the test workflow on GitHub, read at 13:30 for commit `9ae3d90` | 8 jobs, all `success`: Linux, Windows and macOS with Python 3.10 and 3.12, Linux with Python 3.8, and the check that `system/run` is executable, has the `python3` line and Unix line endings |
 
@@ -73,19 +74,12 @@ The stress test and the layer comparison are reported in [system/README.md](../.
 | Country names the official list writes back to front, found by Teammate B's country check | `e3cf06a` |
 | A numeric date that can be read two ways (day first or month first) no longer clears a hit unless both readings contradict it, with 14 tests. It changed no decision on the development set | `7259c05` |
 | Pull request 3: a check read out of a note clears a hit only when the note can be believed, a country a support note only mentions blocks a location clearance against it, 15 wording tests, five stress cases that add misleading text, and `tools/loop.py`. On the development set it changed no decision and the wording of one reason, so `output/dev.jsonl` was regenerated in the merge | `10b7575` |
+| A support note that is read as a check and not believed no longer stands in front of another check, with 3 tests. Found by the stress test on real data: it had turned 2 reviews into clearances and 11 clearances into matches. It changed nothing in `output/dev.jsonl` | `f91cb9e` |
 | Teammate B's demo on public sanctions lists, `tools/make_public_demo.py` and `docs/data-sources.md` (pull request 2), with the three review fixes | `dedc2f7` |
 | Teammate A's review viewer, `viewer/index.html` (pull request 1), with the five review fixes | `395a9af` |
 | The viewer redesign: a built-in sample made by the real system (`tools/make_viewer_sample.py`, 4 tests), side-by-side cards, a review queue | `dcc67c1` |
 
 ## In progress
-
-**Open safety gap, measured at the merge of pull request 3.** With the sentence "Date of birth
-on file confirmed; customer since 2019." added to every support note, two development-set hits
-move from `REVIEW` to `DIFFERENT_ENTITY`. In both, a real identity check gives a date of birth
-that agrees with the hit. The added note is read as a later check and is not believed, but it
-still replaces the real check, the agreement is lost, and a country difference then clears the
-hit. The fix under discussion: a note that cannot be believed never replaces a check that can.
-The session that wrote pull request 3 owns those files; the owner's session measures.
 
 The model layers are on `main` but off by default. They have only run against a stand-in model:
 no API key was available, so a real model is still unmeasured. That measurement is Teammate C's job.
@@ -114,10 +108,11 @@ checked since the redesign. A hosted copy needs GitHub Pages switched on in the 
 settings (deploy from `main`, folder `/`); the page would then be at `/viewer/` under the
 site's address. Only the owner of the repository can do that.
 
-Teammate B's handoff is finished and merged. Two things about it are unverified: the demo has not
-been re-run on the real public list since the review fixes (it was tested on invented lists, and
-profiles with one birth date give byte-identical output to before), and the clearance audit, which
-reports 16 of 16 sampled clearances supported, has not been re-checked row by row.
+Teammate B's handoff is finished and merged. The demo was run again at 14:40 on the real public
+list, the OpenSanctions export named in [data-sources.md](../data-sources.md) with its SHA-256
+checked: 18 demo cases from 6 profiles, and all 18 came out as built. One thing is still
+unverified: the clearance audit, which reports 16 of 16 sampled clearances supported, has not
+been re-checked row by row.
 
 ## Not started, with nobody recorded against them
 

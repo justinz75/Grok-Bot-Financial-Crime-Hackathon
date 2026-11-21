@@ -42,6 +42,11 @@ the decision, and it keeps free-text reading in one place where it can be tested
   name the bank holds for the customer, and a person's date of birth falls at least 14 years
   before it. Otherwise it may support a match and never clears. These are the three checks the
   reader layer already made on what a model reads (decision 6).
+- A support note that is read as a check and not believed never stands in front of another
+  check. Added at 14:40 after the stress test on real data: as the latest check it hid a real
+  check's date of birth that agreed with the hit, and a country difference then cleared the hit.
+  A doubtful note in the identity-check channel keeps its place, because it is a newer real
+  check, and an older check must not clear what a newer one may deny.
 - A country string that cannot be resolved blocks a location clearance.
 - A country a support note only mentions, as a nationality word or in a note set aside as a
   failed check, blocks a location clearance against that country. It is not a shared country.
